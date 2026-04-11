@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{title}}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,550&family=Georgia&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <header class="header">
+        <div class="nav-container">
+            <div class="nav-links">
+                <a href="/">главная</a>
+                <a href="/articles">статьи</a>
+                {{#if user}}
+                    <a href="/articles/create">написать</a>
+                    <a href="/profile/{{user.id}}">{{user.username}}</a>
+                    <a href="/logout">выйти</a>
+                {{else}}
+                    <a href="/login">войти</a>
+                    <a href="/register">регистрация</a>
+                {{/if}}
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        {{#if success}}
+            <div class="alert alert-success">{{success}}</div>
+        {{/if}}
+        {{#if error}}
+            <div class="alert alert-error">{{error}}</div>
+        {{/if}}
+        {{{body}}}
+    </main>
+
+    <footer class="footer">
+        <div class="footer-bottom"></div>
+    </footer>
+
+    <script src="/js/main.js"></script>
+</body>
+</html>

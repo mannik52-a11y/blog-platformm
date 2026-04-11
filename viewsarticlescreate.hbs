@@ -1,0 +1,16 @@
+<h1>✏️ Создать новую статью</h1>
+
+<form method="POST" action="/articles" style="max-width: 800px; margin: 30px 0;">
+    <div class="form-group">
+        <label>Заголовок статьи:</label>
+        <input type="text" name="title" placeholder="Введите заголовок" required>
+    </div>
+    
+    <div class="form-group">
+        <label>Содержание:</label>
+        <textarea name="content" placeholder="Напишите вашу статью..." required></textarea>
+    </div>
+    
+    <button type="submit" class="btn">📤 Опубликовать</button>
+    <a href="/articles" class="btn btn-secondary">← Назад к списку</a>
+</form>

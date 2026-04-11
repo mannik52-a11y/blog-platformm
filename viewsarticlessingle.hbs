@@ -1,0 +1,17 @@
+<article style="max-width: 800px; margin: 0 auto;">
+    <h1 style="font-size: 2rem; margin-bottom: 20px;">{{article.title}}</h1>
+    
+    <div style="display: flex; gap: 20px; color: #666; margin-bottom: 30px; padding: 10px 0; border-bottom: 1px solid #ddd;">
+        <span>👤 {{article.author.username}}</span>
+        <span>📅 {{article.createdAt}}</span>
+        <span>👁️ {{article.views}} просмотров</span>
+    </div>
+    
+    <div style="line-height: 1.8; font-size: 1.1rem;">
+        {{article.content}}
+    </div>
+    
+    <div style="margin-top: 40px;">
+        <a href="/articles" class="btn btn-secondary">← К списку статей</a>
+    </div>
+</article>

@@ -1,0 +1,22 @@
+<div style="text-align: center; padding: 40px 0;">
+    <h1 style="font-size: 2.5rem; margin-bottom: 20px; color: #333;">{{message}}</h1>
+    <p style="font-size: 1.2rem; color: #666; margin-bottom: 40px;">
+        Создавайте удивительные статьи, делитесь знаниями и общайтесь с единомышленниками
+    </p>
+    
+    {{#if user}}
+        <div style="background: #f8f9fa; padding: 30px; border-radius: 10px;">
+            <h2 style="margin-bottom: 20px;">С возвращением, {{user.username}}! 👋</h2>
+            <p style="margin-bottom: 30px;">Что бы вы хотели сделать сегодня?</p>
+            <a href="/articles/create" class="btn">✏️ Написать статью</a>
+            <a href="/articles" class="btn btn-secondary">📚 Читать статьи</a>
+        </div>
+    {{else}}
+        <div style="background: #f8f9fa; padding: 30px; border-radius: 10px;">
+            <h2 style="margin-bottom: 20px;">Присоединяйтесь к нашему сообществу!</h2>
+            <p style="margin-bottom: 30px;">Начните свой путь в мире блогов прямо сейчас</p>
+            <a href="/register" class="btn">📝 Зарегистрироваться</a>
+            <a href="/login" class="btn btn-secondary">🔑 Войти</a>
+        </div>
+    {{/if}}
+</div>

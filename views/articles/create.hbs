@@ -1,0 +1,36 @@
+<div style="max-width: 800px; margin: 0 auto;">
+    <h1 style="margin-bottom: 30px;">✏️ Создать новую статью</h1>
+    
+    <form method="POST" action="/articles" style="background: #f8f9fa; padding: 30px; border-radius: 10px;">
+        <div class="form-group">
+            <label style="font-weight: bold;">Заголовок:</label>
+            <input type="text" name="title" placeholder="Введите заголовок статьи" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+        </div>
+        
+        <div class="form-group">
+            <label style="font-weight: bold;">Категория:</label>
+            <select name="category" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                <option value="">Без категории</option>
+                {{#each categories}}
+                    <option value="{{this.slug}}">{{this.icon}} {{this.name}}</option>
+                {{/each}}
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label style="font-weight: bold;">Теги (через запятую):</label>
+            <input type="text" name="tags" placeholder="например: nodejs, javascript, программирование" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+            <small style="color: #666;">Введите теги через запятую</small>
+        </div>
+        
+        <div class="form-group">
+            <label style="font-weight: bold;">Содержание:</label>
+            <textarea name="content" rows="15" placeholder="Напишите вашу статью..." required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-family: monospace;"></textarea>
+        </div>
+        
+        <div style="display: flex; gap: 10px;">
+            <button type="submit" style="background: #28a745; padding: 12px 30px; font-size: 1.1rem;">📤 Опубликовать</button>
+            <a href="/articles"><button type="button" style="background: #6c757d;">← Отмена</button></a>
+        </div>
+    </form>
+</div>

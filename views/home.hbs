@@ -1,0 +1,85 @@
+<div class="hero">
+    {{#if user}}
+        <h1>привет, {{user.username}}.</h1>
+        <div>
+            <a href="/articles/create" class="btn btn-primary">новая запись</a>
+            <a href="/articles" class="btn btn-outline">читать</a>
+        </div>
+    {{else}}
+        <h1>{{message}}</h1>
+        <div>
+            <a href="/register" class="btn btn-primary">начать</a>
+            <a href="/login" class="btn btn-outline">войти</a>
+        </div>
+    {{/if}}
+</div>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-number">{{stats.articles}}</div>
+        <div class="stat-label">статей</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number">{{stats.users}}</div>
+        <div class="stat-label">авторов</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number">{{stats.comments}}</div>
+        <div class="stat-label">комментариев</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number">{{stats.likes}}</div>
+        <div class="stat-label">лайков</div>
+    </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem;">
+    <div>
+        <h2>свежее</h2>
+        {{#if recentArticles.length}}
+            <div class="articles-grid">
+                {{#each recentArticles}}
+                    <div class="article-card">
+                        <div class="article-header">
+                            <div class="article-category">
+                                {{#each ../categories}}
+                                    {{#if (eq this.slug ../category)}}{{this.name}}{{/if}}
+                                {{/each}}
+                            </div>
+                            <h3 class="article-title"><a href="/articles/{{this.id}}">{{this.title}}</a></h3>
+                        </div>
+                        <div class="article-content">
+                            <p class="article-excerpt">{{truncate this.content 100}}</p>
+                            <div class="article-meta">
+                                <span>{{this.author.username}}</span>
+                                <span>{{formatDate this.createdAt}}</span>
+                            </div>
+                        </div>
+                    </div>
+                {{/each}}
+            </div>
+        {{else}}
+            <p style="padding: 2rem; text-align: center; color: var(--text-secondary);">пока нет статей</p>
+        {{/if}}
+    </div>
+
+    <div class="sidebar">
+        <div class="widget">
+            <h3 class="widget-title">категории</h3>
+            <div class="category-list">
+                {{#each categories}}
+                    <a href="/articles?category={{this.slug}}" class="category-item">{{this.name}}</a>
+                {{/each}}
+            </div>
+        </div>
+
+        <div class="widget">
+            <h3 class="widget-title">теги</h3>
+            <div class="tag-cloud">
+                {{#each popularTags}}
+                    <a href="/articles?tag={{this.tag}}" class="tag">#{{this.tag}}</a>
+                {{/each}}
+            </div>
+        </div>
+    </div>
+</div>

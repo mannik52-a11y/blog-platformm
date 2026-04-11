@@ -1,0 +1,35 @@
+<h1>📚 Все статьи</h1>
+
+{{#if articles.length}}
+    <div style="display: grid; gap: 20px; margin-top: 30px;">
+        {{#each articles}}
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+                <h2 style="margin-bottom: 10px;">
+                    <a href="/articles/{{this.id}}" style="color: #333; text-decoration: none;">
+                        {{this.title}}
+                    </a>
+                </h2>
+                <p style="color: #666; margin-bottom: 15px;">
+                    {{#if this.content}}
+                        {{this.content.substring 0 200}}...
+                    {{/if}}
+                </p>
+                <div style="display: flex; gap: 20px; color: #888; font-size: 0.9rem;">
+                    <span>👤 {{this.author.username}}</span>
+                    <span>📅 {{this.createdAt}}</span>
+                    <span>👁️ {{this.views}} просмотров</span>
+                </div>
+            </div>
+        {{/each}}
+    </div>
+{{else}}
+    <div style="text-align: center; padding: 60px 20px; background: #f8f9fa; border-radius: 10px; margin-top: 30px;">
+        <h2 style="margin-bottom: 20px; color: #666;">Пока нет статей</h2>
+        <p style="margin-bottom: 30px;">Будьте первым, кто поделится своей историей!</p>
+        {{#if user}}
+            <a href="/articles/create" class="btn">✏️ Написать статью</a>
+        {{else}}
+            <a href="/register" class="btn">📝 Зарегистрироваться</a>
+        {{/if}}
+    </div>
+{{/if}}

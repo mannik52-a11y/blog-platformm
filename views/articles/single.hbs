@@ -1,0 +1,139 @@
+<article style="max-width: 900px; margin: 0 auto;">
+    <!-- Заголовок и мета-информация -->
+    <div style="margin-bottom: 30px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h1 style="font-size: 2.5rem; margin: 0;">{{article.title}}</h1>
+            <span style="background: #f0f0f0; padding: 8px 15px; border-radius: 20px; font-size: 1rem;">
+                {{article.categoryIcon}} {{article.categoryName}}
+            </span>
+        </div>
+        
+        <div style="display: flex; gap: 20px; color: #666; padding: 15px 0; border-top: 1px solid #eee; border-bottom: 1px solid #eee;">
+            <span>👤 <a href="/profile/{{article.author.id}}" style="color: #667eea;">{{article.author.username}}</a></span>
+            <span>📅 {{formatDate article.createdAt}}</span>
+            {{#if article.updatedAt}}
+                <span>✏️ Обновлено {{formatDate article.updatedAt}}</span>
+            {{/if}}
+            <span>👁️ {{article.views}} просмотров</span>
+            <span>❤️ {{article.likesCount}} лайков</span>
+        </div>
+    </div>
+    
+    <!-- Теги -->
+    {{#if article.tags.length}}
+        <div style="margin-bottom: 30px;">
+            <strong style="color: #666;">Теги:</strong>
+            {{#each article.tags}}
+                <a href="/articles?tag={{this}}" style="display: inline-block; background: #e9ecef; padding: 3px 10px; border-radius: 15px; margin: 0 3px 3px 0; color: #495057; text-decoration: none; font-size: 0.9rem;">
+                    #{{this}}
+                </a>
+            {{/each}}
+        </div>
+    {{/if}}
+    
+    <!-- Содержание статьи -->
+    <div style="line-height: 1.8; font-size: 1.1rem; margin-bottom: 40px;">
+        {{article.content}}
+    </div>
+    
+    <!-- Кнопки действий -->
+    <div style="display: flex; gap: 15px; margin-bottom: 40px; padding: 20px 0; border-top: 2px solid #eee;">
+        <!-- Кнопка лайка -->
+        {{#if user}}
+            <form method="POST" action="/articles/{{article.id}}/like" style="display: inline;">
+                <button type="submit" style="background: {{#if article.userLiked}}#ff6b6b{{else}}#667eea{{/if}}; padding: 10px 25px; font-size: 1.1rem; display: flex; align-items: center; gap: 5px;">
+                    ❤️ {{#if article.userLiked}}Убрать лайк ({{article.likesCount}}){{else}}Поставить лайк ({{article.likesCount}}){{/if}}
+                </button>
+            </form>
+        {{else}}
+            <a href="/login" style="background: #6c757d; color: white; padding: 10px 25px; border-radius: 5px; text-decoration: none; display: inline-flex; align-items: center; gap: 5px;">
+                ❤️ Войдите, чтобы лайкнуть
+            </a>
+        {{/if}}
+        
+        <!-- Кнопки редактирования/удаления (только для автора) -->
+        {{#if isAuthor}}
+            <a href="/articles/{{article.id}}/edit" style="background: #28a745; color: white; padding: 10px 25px; border-radius: 5px; text-decoration: none; display: inline-flex; align-items: center; gap: 5px;">
+                ✏️ Редактировать
+            </a>
+            <form method="POST" action="/articles/{{article.id}}?_method=DELETE" style="display: inline;" onsubmit="return confirm('Вы уверены, что хотите удалить эту статью?');">
+                <button type="submit" style="background: #dc3545; padding: 10px 25px; display: inline-flex; align-items: center; gap: 5px;">
+                    🗑️ Удалить
+                </button>
+            </form>
+        {{/if}}
+        
+        <a href="/articles" style="background: #6c757d; color: white; padding: 10px 25px; border-radius: 5px; text-decoration: none; display: inline-flex; align-items: center; gap: 5px;">
+            ← К списку
+        </a>
+    </div>
+    
+    <!-- Секция комментариев -->
+    <div style="border-top: 2px solid #333; padding-top: 40px;">
+        <h2 style="margin-bottom: 30px;">💬 Комментарии ({{comments.length}})</h2>
+        
+        <!-- Форма добавления комментария -->
+        {{#if user}}
+            <form method="POST" action="/articles/{{article.id}}/comments" style="margin-bottom: 40px; background: #f8f9fa; padding: 25px; border-radius: 10px;">
+                <div class="form-group">
+                    <label style="font-weight: bold; display: block; margin-bottom: 10px;">Ваш комментарий:</label>
+                    <textarea name="content" rows="3" placeholder="Напишите ваш комментарий..." required style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 5px;"></textarea>
+                </div>
+                <button type="submit" style="background: #28a745; padding: 10px 30px;">📝 Отправить</button>
+            </form>
+        {{else}}
+            <p style="margin-bottom: 40px; text-align: center; padding: 20px; background: #f8f9fa; border-radius: 10px;">
+                <a href="/login" style="color: #667eea;">Войдите</a>, чтобы оставить комментарий
+            </p>
+        {{/if}}
+        
+        <!-- Список комментариев -->
+        <div style="display: flex; flex-direction: column; gap: 20px;">
+            {{#each comments}}
+                <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; border-left: 4px solid #667eea;">
+                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
+                        <div>
+                            <strong style="color: #667eea; font-size: 1.1rem;">
+                                <a href="/profile/{{this.userId}}" style="color: #667eea;">{{this.username}}</a>
+                            </strong>
+                            <span style="color: #999; margin-left: 10px; font-size: 0.9rem;">{{formatDate this.createdAt}}</span>
+                        </div>
+                        
+                        {{#if this.canDelete}}
+                            <form method="POST" action="/comments/{{this.id}}/delete" style="display: inline;">
+                                <button type="submit" style="background: none; color: #dc3545; padding: 5px 10px; border: 1px solid #dc3545; border-radius: 3px; font-size: 0.9rem;" onclick="return confirm('Удалить комментарий?')">
+                                    ✕ Удалить
+                                </button>
+                            </form>
+                        {{/if}}
+                    </div>
+                    <p style="line-height: 1.6; margin: 0;">{{this.content}}</p>
+                </div>
+            {{else}}
+                <p style="text-align: center; color: #999; padding: 40px; background: #f8f9fa; border-radius: 10px;">
+                    Пока нет комментариев. Будьте первым!
+                </p>
+            {{/each}}
+        </div>
+    </div>
+    
+    <!-- Похожие статьи -->
+    {{#if similarArticles.length}}
+        <div style="margin-top: 50px; border-top: 2px solid #eee; padding-top: 40px;">
+            <h3 style="margin-bottom: 20px;">📌 Похожие статьи</h3>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+                {{#each similarArticles}}
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 10px;">
+                        <h4 style="margin-bottom: 10px; font-size: 1rem;">
+                            <a href="/articles/{{this.id}}" style="color: #333; text-decoration: none;">{{this.title}}</a>
+                        </h4>
+                        <div style="display: flex; gap: 10px; color: #888; font-size: 0.85rem;">
+                            <span>👤 {{this.author.username}}</span>
+                            <span>❤️ {{this.likesCount}}</span>
+                        </div>
+                    </div>
+                {{/each}}
+            </div>
+        </div>
+    {{/if}}
+</article>
