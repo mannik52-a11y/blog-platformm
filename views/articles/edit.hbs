@@ -1,40 +1,54 @@
-<div style="max-width: 800px; margin: 0 auto;">
-    <h1 style="margin-bottom: 30px;">✏️ Редактировать статью</h1>
-    
-    <form method="POST" action="/articles/{{article.id}}?_method=PUT" style="background: #f8f9fa; padding: 30px; border-radius: 10px;">
+<div class="form-container">
+    <h1>✏️ Редактировать статью</h1>
+    <form method="POST" action="/articles/{{article.id}}?_method=PUT" enctype="multipart/form-data">
         <div class="form-group">
-            <label style="font-weight: bold;">Заголовок:</label>
-            <input type="text" name="title" value="{{article.title}}" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+            <label>Заголовок</label>
+            <input type="text" name="title" value="{{article.title}}" class="form-control" required>
         </div>
-        
         <div class="form-group">
-            <label style="font-weight: bold;">Категория:</label>
-            <select name="category" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
-                <option value="">Без категории</option>
+            <label>Категория</label>
+            <select name="category" class="form-control">
+                <option value="">— Без категории —</option>
                 {{#each categories}}
-                    <option value="{{this.slug}}" {{#if (eq this.slug ../article.category)}}selected{{/if}}>
-                        {{this.icon}} {{this.name}}
-                    </option>
+                    <option value="{{this}}" {{#if (eq this ../article.category)}}selected{{/if}}>{{this}}</option>
                 {{/each}}
             </select>
         </div>
-        
         <div class="form-group">
-            <label style="font-weight: bold;">Теги (через запятую):</label>
-            <input type="text" name="tags" value="{{#each article.tags}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}" 
-                   placeholder="например: nodejs, javascript, программирование" 
-                   style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
-            <small style="color: #666;">Введите теги через запятую</small>
+            <label>Теги (через запятую)</label>
+            <input type="text" name="tags" value="{{#each article.tags}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}" class="form-control">
         </div>
-        
         <div class="form-group">
-            <label style="font-weight: bold;">Содержание:</label>
-            <textarea name="content" rows="15" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-family: monospace;">{{article.content}}</textarea>
+            <label>Текущее изображение</label>
+            {{#if article.image}}
+                <div><img src="{{article.image}}" style="max-width: 200px; border-radius: 8px;"></div>
+            {{else}}
+                <p>Нет изображения</p>
+            {{/if}}
         </div>
-        
-        <div style="display: flex; gap: 10px;">
-            <button type="submit" style="background: #28a745; padding: 12px 30px; font-size: 1.1rem;">💾 Сохранить изменения</button>
-            <a href="/articles/{{article.id}}"><button type="button" style="background: #6c757d;">← Отмена</button></a>
+        <div class="form-group">
+            <label>Новое изображение</label>
+            <input type="file" name="image" class="form-control" accept="image/*" onchange="previewImage(this)">
+            <div id="imagePreview" style="margin-top: 0.5rem;"></div>
         </div>
+        <div class="form-group">
+            <label>Содержание</label>
+            <textarea name="content" class="form-control" rows="12" required>{{article.content}}</textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Сохранить</button>
+        <a href="/articles/{{article.id}}" class="btn btn-outline">Отмена</a>
     </form>
 </div>
+
+<script>
+function previewImage(input) {
+    const preview = document.getElementById('imagePreview');
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            preview.innerHTML = '<img src="' + e.target.result + '" style="max-width: 200px; border-radius: 8px;">';
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+</script>

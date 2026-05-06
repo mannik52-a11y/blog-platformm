@@ -1,85 +1,79 @@
 <div class="hero">
+    <h1><i class="fas fa-feather-alt"></i> {{message}}</h1>
+    <p>Делитесь мыслями, находите единомышленников</p>
     {{#if user}}
-        <h1>привет, {{user.username}}.</h1>
-        <div>
-            <a href="/articles/create" class="btn btn-primary">новая запись</a>
-            <a href="/articles" class="btn btn-outline">читать</a>
-        </div>
+        <a href="/articles/create" class="btn btn-primary" style="margin-top: 1rem;"><i class="fas fa-pen-fancy"></i> Написать статью</a>
     {{else}}
-        <h1>{{message}}</h1>
-        <div>
-            <a href="/register" class="btn btn-primary">начать</a>
-            <a href="/login" class="btn btn-outline">войти</a>
+        <div style="margin-top: 1rem;">
+            <a href="/register" class="btn btn-primary"><i class="fas fa-user-plus"></i> Начать</a>
+            <a href="/login" class="btn btn-outline"><i class="fas fa-sign-in-alt"></i> Войти</a>
         </div>
     {{/if}}
 </div>
 
 <div class="stats-grid">
-    <div class="stat-card">
-        <div class="stat-number">{{stats.articles}}</div>
-        <div class="stat-label">статей</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-number">{{stats.users}}</div>
-        <div class="stat-label">авторов</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-number">{{stats.comments}}</div>
-        <div class="stat-label">комментариев</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-number">{{stats.likes}}</div>
-        <div class="stat-label">лайков</div>
-    </div>
+    <div class="stat-card"><i class="fas fa-newspaper" style="font-size: 2rem; color: var(--primary);"></i><div class="stat-number">{{stats.articles}}</div><div class="stat-label">Статей</div></div>
+    <div class="stat-card"><i class="fas fa-users" style="font-size: 2rem; color: var(--primary);"></i><div class="stat-number">{{stats.users}}</div><div class="stat-label">Авторов</div></div>
+    <div class="stat-card"><i class="fas fa-comments" style="font-size: 2rem; color: var(--primary);"></i><div class="stat-number">{{stats.comments}}</div><div class="stat-label">Комментариев</div></div>
+    <div class="stat-card"><i class="fas fa-heart" style="font-size: 2rem; color: var(--primary);"></i><div class="stat-number">{{stats.likes}}</div><div class="stat-label">Лайков</div></div>
 </div>
 
 <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem;">
     <div>
-        <h2>свежее</h2>
+        <h2><i class="fas fa-clock"></i> Свежие статьи</h2>
         {{#if recentArticles.length}}
             <div class="articles-grid">
                 {{#each recentArticles}}
-                    <div class="article-card">
-                        <div class="article-header">
-                            <div class="article-category">
-                                {{#each ../categories}}
-                                    {{#if (eq this.slug ../category)}}{{this.name}}{{/if}}
-                                {{/each}}
-                            </div>
-                            <h3 class="article-title"><a href="/articles/{{this.id}}">{{this.title}}</a></h3>
-                        </div>
+                    <div class="card">
+                        {{#if this.image}}
+                            <img src="{{this.image}}" class="article-image" alt="{{this.title}}">
+                        {{/if}}
                         <div class="article-content">
-                            <p class="article-excerpt">{{truncate this.content 100}}</p>
+                            <h3 class="article-title"><a href="/articles/{{this.id}}">{{this.title}}</a></h3>
                             <div class="article-meta">
-                                <span>{{this.author.username}}</span>
-                                <span>{{formatDate this.createdAt}}</span>
+                                <span><i class="fas fa-user"></i> {{this.author.username}}</span>
+                                <span><i class="far fa-calendar-alt"></i> {{formatDate this.createdAt}}</span>
                             </div>
+                            <p class="article-excerpt">{{truncate this.content 100}}</p>
                         </div>
                     </div>
                 {{/each}}
             </div>
         {{else}}
-            <p style="padding: 2rem; text-align: center; color: var(--text-secondary);">пока нет статей</p>
+            <p>Пока нет статей. Будьте первым автором!</p>
         {{/if}}
     </div>
 
     <div class="sidebar">
         <div class="widget">
-            <h3 class="widget-title">категории</h3>
+            <h3 class="widget-title"><i class="fas fa-folder-open"></i> Категории</h3>
             <div class="category-list">
+                <a href="/articles" class="category-item"><i class="fas fa-globe"></i> Все статьи</a>
                 {{#each categories}}
-                    <a href="/articles?category={{this.slug}}" class="category-item">{{this.name}}</a>
+                    <a href="/articles?category={{this}}" class="category-item"><i class="fas fa-tag"></i> {{this}}</a>
                 {{/each}}
             </div>
         </div>
 
         <div class="widget">
-            <h3 class="widget-title">теги</h3>
+            <h3 class="widget-title"><i class="fas fa-chart-line"></i> Популярные теги</h3>
             <div class="tag-cloud">
                 {{#each popularTags}}
                     <a href="/articles?tag={{this.tag}}" class="tag">#{{this.tag}}</a>
                 {{/each}}
+                {{#unless popularTags.length}}
+                    <p style="color: var(--gray);">Пока нет тегов</p>
+                {{/unless}}
             </div>
         </div>
+
+        {{#if user}}
+            <div class="widget">
+                <h3 class="widget-title"><i class="fas fa-user"></i> {{user.username}}</h3>
+                <div style="text-align: center;">
+                    <a href="/profile/{{user.id}}" class="btn btn-outline"><i class="fas fa-id-card"></i> Мой профиль</a>
+                </div>
+            </div>
+        {{/if}}
     </div>
 </div>

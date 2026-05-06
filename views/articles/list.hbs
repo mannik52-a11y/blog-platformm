@@ -1,99 +1,106 @@
-<div style="display: flex; gap: 30px;">
-    <!-- Основной контент - статьи -->
-    <div style="flex: 2;">
-        <h1 style="margin-bottom: 30px;">📚 Все статьи</h1>
-        
-        <!-- Поиск и фильтры -->
-        <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 30px;">
-            <form method="GET" action="/articles" style="display: flex; gap: 10px;">
-                <input type="text" name="search" placeholder="Поиск статей..." value="{{searchQuery}}" style="flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
-                <button type="submit" style="padding: 10px 20px;">🔍 Поиск</button>
-            </form>
-            
-            {{#if currentCategory}}
-                <div style="margin-top: 10px;">
-                    <strong>Категория:</strong> 
-                    {{#each categories}}
-                        {{#if (eq this.slug ../currentCategory)}}
-                            <span style="background: #667eea; color: white; padding: 5px 10px; border-radius: 5px;">{{this.icon}} {{this.name}}</span>
-                        {{/if}}
-                    {{/each}}
-                    <a href="/articles" style="margin-left: 10px; color: #dc3545;">✕ Очистить</a>
-                </div>
-            {{/if}}
-            
-            {{#if currentTag}}
-                <div style="margin-top: 10px;">
-                    <strong>Тег:</strong> 
-                    <span style="background: #667eea; color: white; padding: 5px 10px; border-radius: 5px;">#{{currentTag}}</span>
-                    <a href="/articles" style="margin-left: 10px; color: #dc3545;">✕ Очистить</a>
-                </div>
-            {{/if}}
+<div class="filters-bar">
+    <div class="filters-left">
+        <div class="filter-group">
+            <label><i class="fas fa-search"></i> Поиск:</label>
+            <input type="text" class="filter-input" id="searchInput" placeholder="По заголовку..." value="{{search}}">
         </div>
-        
-        {{#if articles.length}}
-            <div style="display: grid; gap: 20px;">
-                {{#each articles}}
-                    <div style="background: white; padding: 25px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-                        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px;">
-                            <h2 style="margin: 0;">
-                                <a href="/articles/{{this.id}}" style="color: #333; text-decoration: none;">
-                                    {{this.title}}
-                                </a>
-                            </h2>
-                            <span style="background: #f0f0f0; padding: 5px 10px; border-radius: 5px; font-size: 0.9rem;">
-                                {{this.categoryIcon}} {{this.categoryName}}
-                            </span>
-                        </div>
-                        
-                        <p style="color: #666; margin-bottom: 15px; line-height: 1.6;">
-                            {{this.content}}
-                        </p>
-                        
-                        {{#if this.tags.length}}
-                            <div style="margin-bottom: 15px;">
-                                {{#each this.tags}}
-                                    <a href="/articles?tag={{this}}" style="display: inline-block; background: #e9ecef; padding: 3px 8px; border-radius: 3px; margin: 0 3px 3px 0; color: #495057; text-decoration: none; font-size: 0.85rem;">
-                                        #{{this}}
-                                    </a>
-                                {{/each}}
-                            </div>
-                        {{/if}}
-                        
-                        <div style="display: flex; gap: 20px; color: #888; font-size: 0.9rem; border-top: 1px solid #eee; padding-top: 15px;">
-                            <span>👤 {{this.author.username}}</span>
-                            <span>📅 {{formatDate this.createdAt}}</span>
-                            <span>👁️ {{this.views}}</span>
-                            <span>❤️ {{this.likesCount}}</span>
-                        </div>
-                    </div>
-                {{/each}}
-            </div>
-        {{else}}
-            <div style="text-align: center; padding: 60px 20px; background: white; border-radius: 10px;">
-                <h2 style="margin-bottom: 20px; color: #666;">😕 Статьи не найдены</h2>
-                <p style="margin-bottom: 30px;">Попробуйте изменить параметры поиска или создайте новую статью</p>
-                {{#if user}}
-                    <a href="/articles/create"><button style="padding: 12px 30px;">✏️ Написать статью</button></a>
-                {{else}}
-                    <a href="/register"><button style="padding: 12px 30px;">📝 Зарегистрироваться</button></a>
-                {{/if}}
-            </div>
-        {{/if}}
-    </div>
-    
-    <!-- Сайдбар с категориями -->
-    <div style="flex: 1;">
-        <div style="background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); position: sticky; top: 20px;">
-            <h3 style="margin-bottom: 15px;">📑 Категории</h3>
-            <div style="display: grid; gap: 10px;">
+        <div class="filter-group">
+            <label><i class="fas fa-filter"></i> Категория:</label>
+            <select class="filter-select" id="categorySelect">
+                <option value="all">Все категории</option>
                 {{#each categories}}
-                    <a href="/articles?category={{this.slug}}" style="display: flex; align-items: center; gap: 10px; padding: 8px; background: #f8f9fa; border-radius: 5px; color: #333; text-decoration: none; transition: background 0.3s;">
-                        <span style="font-size: 1.2rem;">{{this.icon}}</span>
-                        <span>{{this.name}}</span>
-                    </a>
+                    <option value="{{this}}" {{#if (eq this ../category)}}selected{{/if}}>{{this}}</option>
                 {{/each}}
-            </div>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label><i class="fas fa-user"></i> Автор:</label>
+            <input type="text" class="filter-input" id="authorInput" placeholder="Имя автора..." value="{{author}}">
+        </div>
+        <div class="filter-group">
+            <label><i class="fas fa-sort"></i> Сортировать:</label>
+            <select class="filter-select" id="sortSelect">
+                <option value="newest" {{#if (eq sort "newest")}}selected{{/if}}>📅 Новые сначала</option>
+                <option value="oldest" {{#if (eq sort "oldest")}}selected{{/if}}>📅 Старые сначала</option>
+                <option value="most_liked" {{#if (eq sort "most_liked")}}selected{{/if}}>❤️ По лайкам</option>
+            </select>
         </div>
     </div>
+    <button class="btn-reset" id="resetFilters"><i class="fas fa-times"></i> Сбросить</button>
 </div>
+
+<script>
+    function applyFilters() {
+        const search = document.getElementById('searchInput').value;
+        const category = document.getElementById('categorySelect').value;
+        const author = document.getElementById('authorInput').value;
+        const sort = document.getElementById('sortSelect').value;
+        
+        const params = new URLSearchParams();
+        if (search) params.append('search', search);
+        if (category && category !== 'all') params.append('category', category);
+        if (author) params.append('author', author);
+        if (sort) params.append('sort', sort);
+        
+        window.location.href = '/articles?' + params.toString();
+    }
+    
+    document.getElementById('searchInput').addEventListener('input', function() {
+        const timeout = this.timeout;
+        clearTimeout(timeout);
+        this.timeout = setTimeout(() => applyFilters(), 500);
+    });
+    document.getElementById('authorInput').addEventListener('input', function() {
+        const timeout = this.timeout;
+        clearTimeout(timeout);
+        this.timeout = setTimeout(() => applyFilters(), 500);
+    });
+    document.getElementById('categorySelect').addEventListener('change', applyFilters);
+    document.getElementById('sortSelect').addEventListener('change', applyFilters);
+    document.getElementById('resetFilters').addEventListener('click', () => {
+        window.location.href = '/articles';
+    });
+</script>
+
+<h1>📚 Все статьи</h1>
+
+{{#if articles.length}}
+    <div class="articles-grid">
+        {{#each articles}}
+            <div class="card">
+                {{#if this.image}}
+                    <img src="{{this.image}}" class="article-image" alt="{{this.title}}">
+                {{/if}}
+                <div class="article-content">
+                    <h3 class="article-title"><a href="/articles/{{this.id}}">{{this.title}}</a></h3>
+                    <div class="article-meta">
+                        <span><i class="fas fa-user"></i> {{this.author.username}}</span>
+                        <span><i class="far fa-calendar-alt"></i> {{formatDate this.createdAt}}</span>
+                        <span><i class="fas fa-eye"></i> {{this.views}}</span>
+                        <span><i class="fas fa-heart"></i> {{this.likesCount}}</span>
+                    </div>
+                    <div class="article-meta">
+                        <span><i class="fas fa-folder"></i> {{this.category}}</span>
+                        {{#if this.tags.length}}
+                            <span><i class="fas fa-tags"></i> {{#each this.tags}}#{{this}} {{/each}}</span>
+                        {{/if}}
+                    </div>
+                    <p class="article-excerpt">{{truncate this.content 120}}</p>
+                    <a href="/articles/{{this.id}}" class="btn btn-outline" style="margin-top: 0.5rem;">Читать →</a>
+                </div>
+            </div>
+        {{/each}}
+    </div>
+{{else}}
+    <div style="text-align: center; padding: 3rem; background: white; border-radius: var(--radius);">
+        <i class="fas fa-newspaper" style="font-size: 3rem; color: var(--gray);"></i>
+        <h2 style="margin: 1rem 0;">Статей не найдено</h2>
+        <p>Попробуйте изменить параметры поиска или <a href="/articles/create">напишите первую статью</a></p>
+    </div>
+{{/if}}
+
+{{#if user}}
+    <div style="margin-top: 2rem; text-align: center;">
+        <a href="/articles/create" class="btn btn-primary"><i class="fas fa-plus"></i> Написать новую статью</a>
+    </div>
+{{/if}}

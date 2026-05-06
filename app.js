@@ -1,4 +1,3 @@
-require('dotenv').config();
 const express = require('express');
 const session = require('express-session');
 const flash = require('connect-flash');
@@ -6,49 +5,55 @@ const methodOverride = require('method-override');
 const path = require('path');
 const { engine } = require('express-handlebars');
 const bcrypt = require('bcryptjs');
-const { sequelize, User, Article, Comment, Like } = require('./models');
+const multer = require('multer');
+const fs = require('fs');
 
 const app = express();
 
-// Настройка Handlebars с безопасным доступом к прототипам
+// Настройка загрузки файлов
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => cb(null, 'public/uploads/'),
+    filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname)
+});
+const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
+
+// Создание папки для uploads
+if (!fs.existsSync('public/uploads')) fs.mkdirSync('public/uploads', { recursive: true });
+
+// Запрещенные слова (для модерации)
+const bannedWords = ['спам', 'реклама', 'порно', 'наркотики', 'насилие', 'экстремизм', 'мат', 'дешево', 'бесплатно', 'скидка', 'акция'];
+
+// Функция проверки на запрещенные слова
+function containsBannedWords(text) {
+    if (!text) return false;
+    const lowerText = text.toLowerCase();
+    return bannedWords.some(word => lowerText.includes(word));
+}
+
+// Handlebars
 app.engine('hbs', engine({
     extname: '.hbs',
     defaultLayout: 'main',
     layoutsDir: path.join(__dirname, 'views/layouts'),
-    partialsDir: path.join(__dirname, 'views/partials'),
-    allowProtoPropertiesByDefault: true,
-    allowProtoMethodsByDefault: true,
     helpers: {
         eq: (a, b) => a === b,
-        gt: (a, b) => a > b,
-        lt: (a, b) => a < b,
-        formatDate: (date) => {
-            if (!date) return '';
-            const d = new Date(date);
-            return d.toLocaleDateString('ru-RU', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-            });
-        },
-        truncate: (str, len) => {
-            if (!str) return '';
-            if (str.length <= len) return str;
-            return str.substring(0, len) + '...';
-        }
+        formatDate: (date) => new Date(date).toLocaleDateString('ru-RU'),
+        truncate: (str, len) => str?.length > len ? str.substring(0, len) + '...' : str,
+        isActive: (status) => status === 'active'
     }
 }));
 
 app.set('view engine', 'hbs');
 app.set('views', path.join(__dirname, 'views'));
 
+// Middleware
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(methodOverride('_method'));
 
 app.use(session({
-    secret: process.env.SESSION_SECRET || 'secret',
+    secret: 'secret_key_2026',
     resave: false,
     saveUninitialized: false,
     cookie: { maxAge: 24 * 60 * 60 * 1000 }
@@ -60,277 +65,523 @@ app.use((req, res, next) => {
     res.locals.success = req.flash('success');
     res.locals.error = req.flash('error');
     res.locals.user = req.session.user || null;
+    res.locals.isAdmin = req.session.user && req.session.user.role === 'admin';
     next();
 });
 
+// Категории
 const categories = [
-    { id: 1, name: 'Технологии', slug: 'tech' },
-    { id: 2, name: 'Путешествия', slug: 'travel' },
-    { id: 3, name: 'Кулинария', slug: 'cooking' },
-    { id: 4, name: 'Спорт', slug: 'sports' },
-    { id: 5, name: 'Музыка', slug: 'music' },
-    { id: 6, name: 'Кино', slug: 'movies' },
-    { id: 7, name: 'Книги', slug: 'books' },
-    { id: 8, name: 'Искусство', slug: 'art' },
-    { id: 9, name: 'Наука', slug: 'science' },
-    { id: 10, name: 'Образование', slug: 'education' }
+    'Технологии', 'Путешествия', 'Кулинария', 'Спорт', 'Музыка',
+    'Кино', 'Книги', 'Искусство', 'Наука', 'Образование'
 ];
+
+// Хранилища
+let users = [];
+let articles = [];
+let comments = [];
+let likes = [];
+
+// Создание админа при старте (если нет)
+const initAdmin = async () => {
+    const existingAdmin = users.find(u => u.role === 'admin');
+    if (!existingAdmin) {
+        const hashedPassword = await bcrypt.hash('123', 10);
+        users.push({
+            id: users.length + 1,
+            username: 'admin',
+            email: 'admin@blog.com',
+            password: hashedPassword,
+            role: 'admin',
+            status: 'active',
+            avatar: '/uploads/default-avatar.png',
+            createdAt: new Date()
+        });
+        console.log('✅ Админ создан: логин: admin или admin@blog.com, пароль: 123');
+    }
+};
 
 const isAuthenticated = (req, res, next) => {
     if (req.session.user) return next();
-    req.flash('error', 'Необходимо войти');
+    req.flash('error', 'Войдите в систему');
     res.redirect('/login');
 };
 
-app.get('/', async (req, res) => {
-    try {
-        const articles = await Article.findAll({
-            include: [{ model: User, as: 'author' }],
-            order: [['createdAt', 'DESC']],
-            limit: 5
-        });
-        
-        const stats = {
-            articles: await Article.count(),
-            users: await User.count(),
-            comments: await Comment.count(),
-            likes: await Like.count()
-        };
-        
-        const allTags = [];
-        const allArticles = await Article.findAll();
-        allArticles.forEach(article => {
-            if (article.tags && article.tags.length) allTags.push(...article.tags);
-        });
-        const tagCount = {};
-        allTags.forEach(tag => { tagCount[tag] = (tagCount[tag] || 0) + 1; });
-        const popularTags = Object.entries(tagCount).sort((a,b) => b[1]-a[1]).slice(0,10).map(([tag,count]) => ({ tag, count }));
-        
-        // Преобразуем статьи в обычные объекты
-        const recentArticles = articles.map(article => article.toJSON());
-        
-        res.render('home', { 
-            title: '', 
-            message: 'заметки',
-            categories, 
-            popularTags, 
-            recentArticles, 
-            stats,
-            user: req.session.user
-        });
-    } catch (error) {
-        console.error(error);
-        res.status(500).send('Ошибка');
+const isAdmin = (req, res, next) => {
+    if (req.session.user && req.session.user.role === 'admin') return next();
+    req.flash('error', 'Доступ только для администратора');
+    res.redirect('/');
+};
+
+const isNotBanned = (req, res, next) => {
+    const user = users.find(u => u.id === req.session.user?.id);
+    if (user && user.status === 'banned') {
+        req.session.destroy();
+        req.flash('error', 'Ваш аккаунт заблокирован');
+        return res.redirect('/login');
     }
-});
+    next();
+};
 
-app.get('/register', (req, res) => { res.render('register', { title: 'регистрация' }); });
-app.post('/register', async (req, res) => {
-    try {
-        const { username, email, password } = req.body;
-        const existing = await User.findOne({ where: { email } });
-        if (existing) { req.flash('error', 'Пользователь существует'); return res.redirect('/register'); }
-        const hashed = await bcrypt.hash(password, 10);
-        await User.create({ username, email, password: hashed });
-        req.flash('success', 'Регистрация успешна');
-        res.redirect('/login');
-    } catch (error) { req.flash('error', 'Ошибка'); res.redirect('/register'); }
-});
-
-app.get('/login', (req, res) => { res.render('login', { title: 'вход' }); });
-app.post('/login', async (req, res) => {
-    try {
-        const { email, password } = req.body;
-        const user = await User.findOne({ where: { email } });
-        if (user && await bcrypt.compare(password, user.password)) {
-            req.session.user = { id: user.id, username: user.username, email: user.email, role: user.role };
-            req.flash('success', `привет, ${user.username}`);
-            res.redirect('/');
-        } else { req.flash('error', 'Неверные данные'); res.redirect('/login'); }
-    } catch (error) { req.flash('error', 'Ошибка'); res.redirect('/login'); }
-});
-
-app.get('/logout', (req, res) => { req.session.destroy(); res.redirect('/'); });
-
-app.get('/articles', async (req, res) => {
-    try {
-        const { category, tag, search } = req.query;
-        let where = {};
-        if (category && category !== 'uncategorized') where.category = category;
-        let articles = await Article.findAll({ where, include: [{ model: User, as: 'author' }], order: [['createdAt', 'DESC']] });
-        
-        let filteredArticles = articles.map(a => a.toJSON());
-        
-        if (tag) filteredArticles = filteredArticles.filter(a => a.tags && a.tags.includes(tag));
-        if (search) {
-            const s = search.toLowerCase();
-            filteredArticles = filteredArticles.filter(a => a.title.toLowerCase().includes(s) || a.content.toLowerCase().includes(s));
+// ============= ГЛАВНАЯ =============
+app.get('/', (req, res) => {
+    const allTags = [];
+    articles.forEach(article => {
+        if (article.tags && article.tags.length) {
+            allTags.push(...article.tags);
         }
-        
-        const articlesWithLikes = await Promise.all(filteredArticles.map(async a => {
-            const likesCount = await Like.count({ where: { articleId: a.id } });
-            const cat = categories.find(c => c.slug === a.category);
-            return { ...a, likesCount, categoryName: cat?.name || '' };
-        }));
-        
-        res.render('articles/list', { title: 'статьи', articles: articlesWithLikes, categories, currentCategory: category, currentTag: tag, searchQuery: search });
-    } catch (error) { res.status(500).send('Ошибка'); }
+    });
+    const tagCount = {};
+    allTags.forEach(tag => { tagCount[tag] = (tagCount[tag] || 0) + 1; });
+    const popularTags = Object.entries(tagCount)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10)
+        .map(([tag, count]) => ({ tag, count }));
+
+    // Показываем только опубликованные статьи на главной
+    const publishedArticles = articles.filter(a => a.status === 'published');
+
+    res.render('home', {
+        title: 'Главная',
+        categories,
+        recentArticles: publishedArticles.slice(-6).reverse(),
+        stats: { articles: publishedArticles.length, users: users.filter(u => u.role !== 'admin').length, comments: comments.length, likes: likes.length },
+        popularTags
+    });
 });
 
-app.get('/articles/create', isAuthenticated, (req, res) => { res.render('articles/create', { title: 'новая статья', categories }); });
-app.post('/articles', isAuthenticated, async (req, res) => {
-    try {
-        const { title, content, category, tags } = req.body;
-        const tagsArray = tags ? tags.split(',').map(t => t.trim().toLowerCase()) : [];
-        await Article.create({ title, content, category: category || 'uncategorized', tags: tagsArray, authorId: req.session.user.id });
-        req.flash('success', 'статья создана');
-        res.redirect('/articles');
-    } catch (error) { req.flash('error', 'Ошибка'); res.redirect('/articles/create'); }
+// ============= АДМИН-ПАНЕЛЬ =============
+app.get('/admin', isAuthenticated, isAdmin, (req, res) => {
+    const pendingArticles = articles.filter(a => a.status === 'pending');
+    const allUsers = users.filter(u => u.role !== 'admin');
+    const allArticles = articles;
+    const allComments = comments.map(c => ({
+        ...c,
+        author: users.find(u => u.id === c.userId)
+    }));
+
+    res.render('admin/dashboard', {
+        title: 'Админ-панель',
+        pendingArticles,
+        users: allUsers,
+        articles: allArticles,
+        comments: allComments,
+        stats: {
+            pending: pendingArticles.length,
+            users: allUsers.length,
+            articles: allArticles.length,
+            comments: allComments.length
+        }
+    });
 });
 
-app.get('/articles/:id', async (req, res) => {
-    try {
-        const article = await Article.findByPk(req.params.id, { 
-            include: [{ model: User, as: 'author' }, { model: Comment, as: 'comments', include: [{ model: User, as: 'author' }] }] 
-        });
-        
-        if (!article) { req.flash('error', 'Не найдена'); return res.redirect('/articles'); }
-        
-        article.views += 1; 
-        await article.save();
-        
-        const likesCount = await Like.count({ where: { articleId: article.id } });
-        const userLiked = req.session.user ? await Like.findOne({ where: { articleId: article.id, userId: req.session.user.id } }) : false;
-        const cat = categories.find(c => c.slug === article.category);
-        const similar = await Article.findAll({ where: { category: article.category, id: { [require('sequelize').Op.ne]: article.id } }, limit: 3 });
-        
-        const articleJson = article.toJSON();
-        const similarJson = similar.map(a => a.toJSON());
-        const commentsJson = article.comments ? article.comments.map(c => c.toJSON()) : [];
-        
-        res.render('articles/single', { 
-            title: article.title, 
-            article: { ...articleJson, likesCount, userLiked: !!userLiked, categoryName: cat?.name || '' }, 
-            comments: commentsJson, 
-            similarArticles: similarJson, 
-            isAuthor: req.session.user && article.authorId === req.session.user.id 
-        });
-    } catch (error) { 
-        console.error(error);
-        res.status(500).send('Ошибка'); 
+// Одобрение статьи
+app.post('/admin/articles/:id/approve', isAuthenticated, isAdmin, (req, res) => {
+    const article = articles.find(a => a.id === parseInt(req.params.id));
+    if (article) {
+        article.status = 'published';
+        req.flash('success', 'Статья одобрена и опубликована');
     }
+    res.redirect('/admin');
 });
 
-app.get('/articles/:id/edit', isAuthenticated, async (req, res) => {
-    const article = await Article.findByPk(req.params.id);
-    if (!article || article.authorId !== req.session.user.id) { req.flash('error', 'Нет прав'); return res.redirect('/articles'); }
-    res.render('articles/edit', { title: 'редактировать', article: article.toJSON(), categories });
+// Отклонение статьи
+app.post('/admin/articles/:id/reject', isAuthenticated, isAdmin, (req, res) => {
+    const index = articles.findIndex(a => a.id === parseInt(req.params.id));
+    if (index !== -1) {
+        const articleId = articles[index].id;
+        articles.splice(index, 1);
+        comments = comments.filter(c => c.articleId !== articleId);
+        likes = likes.filter(l => l.articleId !== articleId);
+        req.flash('success', 'Статья отклонена и удалена');
+    }
+    res.redirect('/admin');
 });
 
-app.put('/articles/:id', isAuthenticated, async (req, res) => {
-    const article = await Article.findByPk(req.params.id);
-    if (!article || article.authorId !== req.session.user.id) { req.flash('error', 'Нет прав'); return res.redirect('/articles'); }
+// Удаление любой статьи (админ)
+app.delete('/admin/articles/:id', isAuthenticated, isAdmin, (req, res) => {
+    const index = articles.findIndex(a => a.id === parseInt(req.params.id));
+    if (index !== -1) {
+        const articleId = articles[index].id;
+        articles.splice(index, 1);
+        comments = comments.filter(c => c.articleId !== articleId);
+        likes = likes.filter(l => l.articleId !== articleId);
+        req.flash('success', 'Статья удалена');
+    }
+    res.redirect('/admin');
+});
+
+// Удаление любого комментария (админ)
+app.delete('/admin/comments/:id', isAuthenticated, isAdmin, (req, res) => {
+    const index = comments.findIndex(c => c.id === parseInt(req.params.id));
+    if (index !== -1) {
+        comments.splice(index, 1);
+        req.flash('success', 'Комментарий удален');
+    }
+    res.redirect('/admin');
+});
+
+// Блокировка пользователя
+app.post('/admin/users/:id/ban', isAuthenticated, isAdmin, (req, res) => {
+    const user = users.find(u => u.id === parseInt(req.params.id));
+    if (user && user.role !== 'admin') {
+        user.status = 'banned';
+        req.flash('success', `Пользователь ${user.username} заблокирован`);
+    }
+    res.redirect('/admin');
+});
+
+// Разблокировка пользователя
+app.post('/admin/users/:id/unban', isAuthenticated, isAdmin, (req, res) => {
+    const user = users.find(u => u.id === parseInt(req.params.id));
+    if (user && user.role !== 'admin') {
+        user.status = 'active';
+        req.flash('success', `Пользователь ${user.username} разблокирован`);
+    }
+    res.redirect('/admin');
+});
+
+// ============= ПОИСК И ФИЛЬТРАЦИЯ =============
+app.get('/articles', (req, res) => {
+    let { sort, search, category, author, tag } = req.query;
+    // Показываем только опубликованные статьи (для админа — все)
+    let filtered = articles.filter(a => a.status === 'published');
+    
+    if (req.session.user && req.session.user.role === 'admin') {
+        filtered = [...articles];
+    }
+
+    if (search) {
+        const s = search.toLowerCase();
+        filtered = filtered.filter(a => a.title.toLowerCase().includes(s) || a.content.toLowerCase().includes(s));
+    }
+
+    if (category && category !== 'all') {
+        filtered = filtered.filter(a => a.category === category);
+    }
+
+    if (author) {
+        filtered = filtered.filter(a => a.author.username.toLowerCase().includes(author.toLowerCase()));
+    }
+
+    if (tag) {
+        filtered = filtered.filter(a => a.tags && a.tags.includes(tag));
+    }
+
+    if (sort === 'newest') {
+        filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    } else if (sort === 'oldest') {
+        filtered.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    } else if (sort === 'most_liked') {
+        filtered.sort((a, b) => {
+            const likesA = likes.filter(l => l.articleId === a.id).length;
+            const likesB = likes.filter(l => l.articleId === b.id).length;
+            return likesB - likesA;
+        });
+    }
+
+    filtered = filtered.map(a => ({
+        ...a,
+        likesCount: likes.filter(l => l.articleId === a.id).length
+    }));
+
+    res.render('articles/list', {
+        title: 'Статьи',
+        articles: filtered,
+        categories,
+        sort,
+        search,
+        category,
+        author
+    });
+});
+
+// ============= СОЗДАНИЕ СТАТЬИ (на модерацию) =============
+app.get('/articles/create', isAuthenticated, isNotBanned, (req, res) => {
+    res.render('articles/create', { title: 'Новая статья', categories });
+});
+
+app.post('/articles', isAuthenticated, isNotBanned, upload.single('image'), (req, res) => {
     const { title, content, category, tags } = req.body;
-    const tagsArray = tags ? tags.split(',').map(t => t.trim().toLowerCase()) : [];
-    await article.update({ title, content, category: category || 'uncategorized', tags: tagsArray });
-    req.flash('success', 'обновлено');
-    res.redirect(`/articles/${article.id}`);
-});
+    const tagsArray = tags ? tags.split(',').map(t => t.trim()) : [];
 
-app.delete('/articles/:id', isAuthenticated, async (req, res) => {
-    const article = await Article.findByPk(req.params.id);
-    if (!article || article.authorId !== req.session.user.id) { req.flash('error', 'Нет прав'); return res.redirect('/articles'); }
-    await Comment.destroy({ where: { articleId: article.id } });
-    await Like.destroy({ where: { articleId: article.id } });
-    await article.destroy();
-    req.flash('success', 'удалено');
+    // Проверка на запрещенные слова
+    const hasBannedWords = containsBannedWords(title) || containsBannedWords(content);
+    const status = hasBannedWords ? 'rejected' : 'pending';
+
+    articles.push({
+        id: articles.length + 1,
+        title,
+        content,
+        category: category || 'Без категории',
+        tags: tagsArray,
+        image: req.file ? '/uploads/' + req.file.filename : null,
+        author: { id: req.session.user.id, username: req.session.user.username },
+        createdAt: new Date(),
+        views: 0,
+        status: status
+    });
+
+    if (hasBannedWords) {
+        req.flash('error', 'Статья содержит запрещенные слова и была отклонена');
+    } else {
+        req.flash('success', 'Статья отправлена на модерацию');
+    }
     res.redirect('/articles');
 });
 
-app.post('/articles/:id/like', isAuthenticated, async (req, res) => {
-    const articleId = req.params.id;
+// ============= ПРОСМОТР СТАТЬИ =============
+app.get('/articles/:id', (req, res) => {
+    const article = articles.find(a => a.id === parseInt(req.params.id));
+    if (!article) {
+        req.flash('error', 'Статья не найдена');
+        return res.redirect('/articles');
+    }
+    
+    // Проверка доступа (админ видит все, пользователь — только опубликованные или свои черновики)
+    const isAuthor = req.session.user && article.author.id === req.session.user.id;
+    const isAdminUser = req.session.user && req.session.user.role === 'admin';
+    
+    if (article.status !== 'published' && !isAuthor && !isAdminUser) {
+        req.flash('error', 'Статья находится на модерации');
+        return res.redirect('/articles');
+    }
+
+    article.views++;
+    const articleLikes = likes.filter(l => l.articleId === article.id);
+    const userLiked = req.session.user ? articleLikes.some(l => l.userId === req.session.user.id) : false;
+    const articleComments = comments.filter(c => c.articleId === article.id).map(c => ({
+        ...c,
+        author: users.find(u => u.id === c.userId)
+    }));
+
+    res.render('articles/single', {
+        title: article.title,
+        article: { ...article, likesCount: articleLikes.length, userLiked },
+        comments: articleComments.reverse(),
+        isAuthor: isAuthor,
+        isAdmin: isAdminUser
+    });
+});
+
+// ============= РЕДАКТИРОВАНИЕ СТАТЬИ =============
+app.get('/articles/:id/edit', isAuthenticated, isNotBanned, (req, res) => {
+    const article = articles.find(a => a.id === parseInt(req.params.id));
+    if (!article || article.author.id !== req.session.user.id) {
+        req.flash('error', 'Нет прав');
+        return res.redirect('/articles');
+    }
+    res.render('articles/edit', { title: 'Редактировать', article, categories });
+});
+
+app.put('/articles/:id', isAuthenticated, isNotBanned, upload.single('image'), (req, res) => {
+    const article = articles.find(a => a.id === parseInt(req.params.id));
+    if (!article || article.author.id !== req.session.user.id) {
+        req.flash('error', 'Нет прав');
+        return res.redirect('/articles');
+    }
+
+    const { title, content, category, tags } = req.body;
+    article.title = title;
+    article.content = content;
+    article.category = category || 'Без категории';
+    article.tags = tags ? tags.split(',').map(t => t.trim()) : [];
+    if (req.file) article.image = '/uploads/' + req.file.filename;
+    article.updatedAt = new Date();
+    article.status = 'pending'; // После редактирования снова на модерацию
+
+    req.flash('success', 'Статья обновлена и отправлена на модерацию');
+    res.redirect(`/articles/${article.id}`);
+});
+
+app.delete('/articles/:id', isAuthenticated, (req, res) => {
+    const index = articles.findIndex(a => a.id === parseInt(req.params.id));
+    if (index === -1) {
+        req.flash('error', 'Статья не найдена');
+        return res.redirect('/articles');
+    }
+    const article = articles[index];
+    const isAuthor = article.author.id === req.session.user.id;
+    const isAdminUser = req.session.user && req.session.user.role === 'admin';
+    
+    if (!isAuthor && !isAdminUser) {
+        req.flash('error', 'Нет прав');
+        return res.redirect('/articles');
+    }
+    
+    const articleId = article.id;
+    articles.splice(index, 1);
+    comments = comments.filter(c => c.articleId !== articleId);
+    likes = likes.filter(l => l.articleId !== articleId);
+    req.flash('success', 'Статья удалена');
+    res.redirect('/articles');
+});
+
+// ============= ЛАЙКИ =============
+app.post('/articles/:id/like', isAuthenticated, isNotBanned, (req, res) => {
+    const articleId = parseInt(req.params.id);
     const userId = req.session.user.id;
-    const existing = await Like.findOne({ where: { articleId, userId } });
-    if (existing) await existing.destroy();
-    else await Like.create({ articleId, userId });
+    const existing = likes.find(l => l.articleId === articleId && l.userId === userId);
+
+    if (existing) {
+        likes = likes.filter(l => !(l.articleId === articleId && l.userId === userId));
+    } else {
+        likes.push({ id: likes.length + 1, articleId, userId });
+    }
     res.redirect(`/articles/${articleId}`);
 });
 
-app.post('/articles/:id/comments', isAuthenticated, async (req, res) => {
-    await Comment.create({ content: req.body.content, articleId: req.params.id, userId: req.session.user.id });
-    req.flash('success', 'комментарий добавлен');
+// ============= КОММЕНТАРИИ =============
+app.post('/articles/:id/comments', isAuthenticated, isNotBanned, (req, res) => {
+    const { content } = req.body;
+    
+    // Проверка на запрещенные слова в комментариях
+    if (containsBannedWords(content)) {
+        req.flash('error', 'Комментарий содержит запрещенные слова');
+        return res.redirect(`/articles/${req.params.id}`);
+    }
+    
+    comments.push({
+        id: comments.length + 1,
+        articleId: parseInt(req.params.id),
+        userId: req.session.user.id,
+        content: content,
+        createdAt: new Date()
+    });
+    req.flash('success', 'Комментарий добавлен');
     res.redirect(`/articles/${req.params.id}`);
 });
 
-app.post('/comments/:id/delete', isAuthenticated, async (req, res) => {
-    const comment = await Comment.findByPk(req.params.id);
-    if (!comment) { req.flash('error', 'Не найден'); return res.redirect('back'); }
-    const article = await Article.findByPk(comment.articleId);
-    if (comment.userId === req.session.user.id || (article && article.authorId === req.session.user.id)) await comment.destroy();
-    else { req.flash('error', 'Нет прав'); return res.redirect('back'); }
-    req.flash('success', 'удален');
+app.post('/comments/:id/delete', isAuthenticated, (req, res) => {
+    const index = comments.findIndex(c => c.id === parseInt(req.params.id));
+    if (index === -1) {
+        req.flash('error', 'Комментарий не найден');
+        return res.redirect('back');
+    }
+    const comment = comments[index];
+    const article = articles.find(a => a.id === comment.articleId);
+    const isAuthor = comment.userId === req.session.user.id;
+    const isArticleAuthor = article && article.author.id === req.session.user.id;
+    const isAdminUser = req.session.user && req.session.user.role === 'admin';
+    
+    if (isAuthor || isArticleAuthor || isAdminUser) {
+        comments.splice(index, 1);
+        req.flash('success', 'Комментарий удален');
+    } else {
+        req.flash('error', 'Нет прав');
+    }
     res.redirect(`/articles/${comment.articleId}`);
 });
 
-app.get('/profile/:id', async (req, res) => {
-    try {
-        const userId = parseInt(req.params.id);
-        const user = await User.findByPk(userId);
-        
-        if (!user) { 
-            req.flash('error', 'Пользователь не найден'); 
-            return res.redirect('/'); 
+// ============= АВТОРИЗАЦИЯ =============
+app.get('/register', (req, res) => { res.render('register', { title: 'Регистрация' }); });
+
+app.post('/register', upload.single('avatar'), async (req, res) => {
+    const { username, email, password } = req.body;
+    if (users.find(u => u.email === email)) {
+        req.flash('error', 'Пользователь уже существует');
+        return res.redirect('/register');
+    }
+    if (users.find(u => u.username === username)) {
+        req.flash('error', 'Имя пользователя уже занято');
+        return res.redirect('/register');
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    users.push({
+        id: users.length + 1,
+        username,
+        email,
+        password: hashedPassword,
+        role: 'user',
+        status: 'active',
+        avatar: req.file ? '/uploads/' + req.file.filename : '/uploads/default-avatar.png',
+        createdAt: new Date()
+    });
+    req.flash('success', 'Регистрация успешна!');
+    res.redirect('/login');
+});
+
+app.get('/login', (req, res) => { res.render('login', { title: 'Вход' }); });
+
+app.post('/login', async (req, res) => {
+    const { login, password } = req.body;
+    
+    // Ищем пользователя по email ИЛИ по username
+    const user = users.find(u => u.email === login || u.username === login);
+    
+    if (user && await bcrypt.compare(password, user.password)) {
+        if (user.status === 'banned') {
+            req.flash('error', 'Ваш аккаунт заблокирован');
+            return res.redirect('/login');
         }
-        
-        const articles = await Article.findAll({ 
-            where: { authorId: user.id }, 
-            include: [{ model: User, as: 'author' }],
-            order: [['createdAt', 'DESC']]
-        });
-        
-        const comments = await Comment.findAll({ 
-            where: { userId: user.id }, 
-            include: [{ model: Article, as: 'article' }],
-            order: [['createdAt', 'DESC']]
-        });
-        
-        const stats = { 
-            articles: articles.length, 
-            comments: comments.length, 
-            likes: 0 
+        req.session.user = { 
+            id: user.id, 
+            username: user.username, 
+            email: user.email, 
+            avatar: user.avatar,
+            role: user.role 
         };
-        
-        // Преобразуем в обычные объекты
-        const articlesJson = articles.map(a => a.toJSON());
-        const commentsJson = comments.map(c => ({
-            ...c.toJSON(),
-            article: c.article ? c.article.toJSON() : null
-        }));
-        
-        res.render('profile', { 
-            title: user.username,
-            profileUser: {
-                id: user.id,
-                username: user.username,
-                email: user.email,
-                createdAt: user.createdAt
-            },
-            articles: articlesJson,
-            comments: commentsJson,
-            stats: stats,
-            categories: categories,
-            isOwnProfile: req.session.user && req.session.user.id === user.id,
-            user: req.session.user
-        });
-    } catch (error) {
-        console.error('Ошибка в профиле:', error);
-        req.flash('error', 'Ошибка загрузки профиля');
-        res.redirect('/');
+        req.flash('success', `Добро пожаловать, ${user.username}!`);
+        if (user.role === 'admin') {
+            res.redirect('/admin');
+        } else {
+            res.redirect('/');
+        }
+    } else {
+        req.flash('error', 'Неверный логин/email или пароль');
+        res.redirect('/login');
     }
 });
 
-const PORT = process.env.PORT || 3000;
-sequelize.sync({ alter: true }).then(() => {
-    console.log('База данных готова');
-    app.listen(PORT, () => console.log(`Сервер на http://localhost:${PORT}`));
-}).catch(err => console.error('Ошибка БД:', err));
+app.get('/logout', (req, res) => {
+    req.session.destroy();
+    res.redirect('/');
+});
+
+// ============= ПРОФИЛЬ (для любого пользователя) =============
+app.get('/profile/:id', (req, res) => {
+    const user = users.find(u => u.id === parseInt(req.params.id));
+    if (!user) {
+        req.flash('error', 'Пользователь не найден');
+        return res.redirect('/');
+    }
+
+    const userArticles = articles.filter(a => a.author.id === user.id && a.status === 'published');
+    const userComments = comments.filter(c => c.userId === user.id).map(c => ({
+        ...c,
+        article: articles.find(a => a.id === c.articleId)
+    }));
+    const receivedLikes = likes.filter(l => {
+        const article = articles.find(a => a.id === l.articleId);
+        return article && article.author.id === user.id;
+    }).length;
+
+    res.render('profile', {
+        title: user.username,
+        profileUser: user,
+        articles: userArticles,
+        comments: userComments,
+        stats: { articles: userArticles.length, comments: userComments.length, likes: receivedLikes },
+        isOwnProfile: req.session.user && req.session.user.id === user.id
+    });
+});
+
+app.post('/profile/:id/avatar', isAuthenticated, upload.single('avatar'), (req, res) => {
+    if (req.session.user.id !== parseInt(req.params.id)) {
+        req.flash('error', 'Нет прав');
+        return res.redirect('back');
+    }
+    const user = users.find(u => u.id === parseInt(req.params.id));
+    if (user && req.file) {
+        user.avatar = '/uploads/' + req.file.filename;
+        req.session.user.avatar = user.avatar;
+        req.flash('success', 'Аватар обновлен');
+    }
+    res.redirect(`/profile/${req.params.id}`);
+});
+
+// Инициализация админа и запуск
+initAdmin().then(() => {
+    const PORT = process.env.PORT || 3000;
+    app.listen(PORT, () => console.log(`✅ Сервер: http://localhost:${PORT}`));
+});

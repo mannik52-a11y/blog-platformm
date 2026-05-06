@@ -7,19 +7,25 @@
     "start": "node app.js",
     "dev": "nodemon app.js"
   },
-  "keywords": ["blog", "nodejs", "express", "mysql"],
+  "keywords": [
+    "blog",
+    "nodejs",
+    "express",
+    "mysql"
+  ],
   "author": "Мамонтов Максим",
   "license": "ISC",
   "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "connect-flash": "^0.1.1",
+    "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "express-handlebars": "^7.1.2",
     "express-session": "^1.17.3",
-    "connect-flash": "^0.1.1",
     "method-override": "^3.0.0",
-    "dotenv": "^16.3.1",
+    "multer": "^2.1.1",
     "mysql2": "^3.6.0",
-    "sequelize": "^6.33.0",
-    "bcryptjs": "^2.4.3"
+    "sequelize": "^6.33.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
