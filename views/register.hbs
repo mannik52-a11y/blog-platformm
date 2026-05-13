@@ -16,9 +16,88 @@
         <div class="form-group">
             <label>Аватар (jpg, png, до 5MB)</label>
             <input type="file" name="avatar" class="form-control" accept="image/*">
-            <small style="color: var(--gray);">Необязательно. Можно загрузить позже.</small>
         </div>
-        <button type="submit" class="btn btn-primary">Зарегистрироваться</button>
+        
+        <div class="form-group" style="margin: 1rem 0; display: flex; align-items: flex-start; gap: 0.5rem;">
+            <input type="checkbox" name="agree_privacy" id="agree_privacy" required style="width: auto;">
+            <label for="agree_privacy" style="margin: 0; font-size: 0.85rem;">
+                Я принимаю условия 
+                <a href="#" onclick="openPrivacyModal(); return false;" style="color: var(--primary);">политики конфиденциальности</a> 
+                и даю согласие на обработку персональных данных
+            </label>
+        </div>
+        
+        <button type="submit" class="btn btn-primary" style="width: 100%;">Зарегистрироваться</button>
     </form>
     <p style="margin-top: 1rem; text-align: center;">Уже есть аккаунт? <a href="/login">Войти</a></p>
 </div>
+
+<div id="privacyModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+    <div style="background: white; max-width: 600px; max-height: 80vh; overflow-y: auto; border-radius: 16px; padding: 2rem; margin: 2rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h2 style="margin: 0;">Политика конфиденциальности</h2>
+            <button onclick="closePrivacyModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+        </div>
+        <div style="line-height: 1.6;">
+            <h3>1. Общие положения</h3>
+            <p>Настоящая политика обработки персональных данных составлена в соответствии с требованиями законодательства Российской Федерации.</p>
+            
+            <h3>2. Какие данные мы собираем</h3>
+            <p>При регистрации на сайте вы предоставляете следующие данные:</p>
+            <ul>
+                <li>Имя пользователя (логин)</li>
+                <li>Адрес электронной почты (email)</li>
+                <li>Аватар (по желанию)</li>
+                <li>Дата регистрации</li>
+            </ul>
+            
+            <h3>3. Как мы используем ваши данные</h3>
+            <ul>
+                <li>Для создания и управления вашим аккаунтом</li>
+                <li>Для отображения вашего имени под статьями и комментариями</li>
+                <li>Для связи с вами (восстановление пароля, уведомления)</li>
+                <li>Для улучшения работы сайта</li>
+            </ul>
+            
+            <h3>4. Публичная информация</h3>
+            <p>Ваше имя пользователя и аватар видны другим пользователям сайта. Ваш email остается конфиденциальным и не передается третьим лицам без вашего согласия.</p>
+            
+            <h3>5. Ваши права</h3>
+            <p>Вы имеете право:</p>
+            <ul>
+                <li>Запросить копию ваших данных</li>
+                <li>Изменить или удалить свои данные</li>
+                <li>Отозвать согласие на обработку данных</li>
+            </ul>
+            
+            <h3>6. Хранение данных</h3>
+            <p>Ваши данные хранятся до тех пор, пока вы пользуетесь сайтом. При удалении аккаунта все ваши данные удаляются без возможности восстановления.</p>
+            
+            <h3>7. Контакты</h3>
+            <p>По вопросам, связанным с обработкой персональных данных, вы можете обратиться по email: privacy@blog-platform.com</p>
+            
+            <p style="margin-top: 1rem; font-size: 0.85rem; color: #666;">Дата последнего обновления: 13 мая 2026 г.</p>
+        </div>
+        <div style="margin-top: 1.5rem; text-align: center;">
+            <button onclick="closePrivacyModal()" class="btn btn-primary" style="padding: 0.5rem 2rem;">Закрыть</button>
+        </div>
+    </div>
+</div>
+
+<script>
+function openPrivacyModal() {
+    document.getElementById('privacyModal').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+
+function closePrivacyModal() {
+    document.getElementById('privacyModal').style.display = 'none';
+    document.body.style.overflow = 'auto';
+}
+
+document.getElementById('privacyModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closePrivacyModal();
+    }
+});
+</script>
