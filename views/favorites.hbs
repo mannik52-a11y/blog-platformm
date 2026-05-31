@@ -1,0 +1,33 @@
+<h1>Избранное</h1>
+
+{{#if articles.length}}
+    <div class="articles-grid">
+        {{#each articles}}
+            <div class="article-card">
+                {{#if this.image}}<img src="{{this.image}}" class="article-image" alt="{{this.title}}">{{/if}}
+                <div class="article-content">
+                    <div class="article-header">
+                        <div class="article-category">{{this.category}}</div>
+                        <h3 class="article-title"><a href="/articles/{{this.id}}">{{this.title}}</a></h3>
+                    </div>
+                    <p class="article-excerpt">{{truncate this.content 120}}</p>
+                    <div class="article-meta">
+                        <span>{{this.author.username}}</span>
+                        <span>{{formatDate this.createdAt}}</span>
+                        <span>❤️ {{this.likesCount}}</span>
+                    </div>
+                    <div class="article-actions" style="margin-top: 0.5rem;">
+                        <form method="POST" action="/articles/{{this.id}}/favorite">
+                            <button type="submit" class="btn btn-danger btn-sm">Удалить из избранного</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        {{/each}}
+    </div>
+{{else}}
+    <div class="empty-state">
+        <p>У вас пока нет избранных статей</p>
+        <a href="/articles" class="btn btn-primary">Перейти к статьям</a>
+    </div>
+{{/if}}

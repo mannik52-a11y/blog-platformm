@@ -1,11 +1,11 @@
 <div class="filters-bar">
-    <div class="filters-left">
+    <div class="filters-row">
         <div class="filter-group">
-            <label><i class="fas fa-search"></i> Поиск:</label>
+            <label>Поиск:</label>
             <input type="text" class="filter-input" id="searchInput" placeholder="По заголовку..." value="{{search}}">
         </div>
         <div class="filter-group">
-            <label><i class="fas fa-filter"></i> Категория:</label>
+            <label>Категория:</label>
             <select class="filter-select" id="categorySelect">
                 <option value="all">Все категории</option>
                 {{#each categories}}
@@ -14,27 +14,95 @@
             </select>
         </div>
         <div class="filter-group">
-            <label><i class="fas fa-user"></i> Автор:</label>
+            <label>Автор:</label>
             <input type="text" class="filter-input" id="authorInput" placeholder="Имя автора..." value="{{author}}">
         </div>
         <div class="filter-group">
-            <label><i class="fas fa-sort"></i> Сортировать:</label>
+            <label>Сортировка:</label>
             <select class="filter-select" id="sortSelect">
                 <option value="newest" {{#if (eq sort "newest")}}selected{{/if}}>📅 Новые сначала</option>
                 <option value="oldest" {{#if (eq sort "oldest")}}selected{{/if}}>📅 Старые сначала</option>
                 <option value="most_liked" {{#if (eq sort "most_liked")}}selected{{/if}}>❤️ По лайкам</option>
             </select>
         </div>
+        <button class="btn-reset" id="resetFilters">Сбросить</button>
     </div>
-    <button class="btn-reset" id="resetFilters"><i class="fas fa-times"></i> Сбросить</button>
 </div>
+
+{{#if currentCategory}}
+    <div class="active-filters">
+        <span class="filter-badge">Категория: {{currentCategory}} <a href="/articles" class="remove-filter">✕</a></span>
+    </div>
+{{/if}}
+{{#if currentTag}}
+    <div class="active-filters">
+        <span class="filter-badge">Тег: #{{currentTag}} <a href="/articles" class="remove-filter">✕</a></span>
+    </div>
+{{/if}}
+
+<h1>📚 Все статьи</h1>
+
+{{#if articles.length}}
+    <div class="articles-grid">
+        {{#each articles}}
+            <div class="article-card">
+                {{#if this.image}}
+                    <img src="{{this.image}}" class="article-image" alt="{{this.title}}">
+                {{/if}}
+                <div class="article-content">
+                    <div class="article-header">
+                        <div class="article-category">{{this.category}}</div>
+                        <h3 class="article-title"><a href="/articles/{{this.id}}">{{this.title}}</a></h3>
+                    </div>
+                    <p class="article-excerpt">{{truncate this.content 120}}</p>
+                    <div class="article-meta">
+                        <span><i class="fas fa-user"></i> {{this.author.username}}</span>
+                        <span><i class="far fa-calendar-alt"></i> {{formatDate this.createdAt}}</span>
+                        <span><i class="fas fa-eye"></i> {{this.views}}</span>
+                        <span><i class="fas fa-heart"></i> {{this.likesCount}}</span>
+                        {{#if this.isFavorite}}
+                            <span class="favorite-badge"><i class="fas fa-bookmark"></i> В избранном</span>
+                        {{/if}}
+                    </div>
+                    {{#if this.tags.length}}
+                        <div class="article-tags">
+                            {{#each this.tags}}
+                                <a href="/articles?tag={{this}}" class="tag">#{{this}}</a>
+                            {{/each}}
+                        </div>
+                    {{/if}}
+                    <div class="article-actions">
+                        <a href="/articles/{{this.id}}" class="btn btn-outline btn-sm">Читать →</a>
+                        {{#if ../user}}
+                            <form method="POST" action="/articles/{{this.id}}/favorite" style="display: inline;">
+                                <button type="submit" class="btn btn-sm {{#if this.isFavorite}}btn-danger{{else}}btn-outline{{/if}}">
+                                    <i class="fas {{#if this.isFavorite}}fa-trash{{else}}fa-bookmark{{/if}}"></i>
+                                    {{#if this.isFavorite}}Удалить{{else}}В избранное{{/if}}
+                                </button>
+                            </form>
+                        {{/if}}
+                    </div>
+                </div>
+            </div>
+        {{/each}}
+    </div>
+{{else}}
+    <div class="empty-state">
+        <i class="fas fa-newspaper"></i>
+        <h2>Статей не найдено</h2>
+        <p>Попробуйте изменить параметры поиска</p>
+        {{#if user}}
+            <a href="/articles/create" class="btn btn-primary">Написать первую статью</a>
+        {{/if}}
+    </div>
+{{/if}}
 
 <script>
     function applyFilters() {
-        const search = document.getElementById('searchInput').value;
-        const category = document.getElementById('categorySelect').value;
-        const author = document.getElementById('authorInput').value;
-        const sort = document.getElementById('sortSelect').value;
+        const search = document.getElementById('searchInput')?.value || '';
+        const category = document.getElementById('categorySelect')?.value || 'all';
+        const author = document.getElementById('authorInput')?.value || '';
+        const sort = document.getElementById('sortSelect')?.value || 'newest';
         
         const params = new URLSearchParams();
         if (search) params.append('search', search);
@@ -45,62 +113,157 @@
         window.location.href = '/articles?' + params.toString();
     }
     
-    document.getElementById('searchInput').addEventListener('input', function() {
-        const timeout = this.timeout;
-        clearTimeout(timeout);
-        this.timeout = setTimeout(() => applyFilters(), 500);
-    });
-    document.getElementById('authorInput').addEventListener('input', function() {
-        const timeout = this.timeout;
-        clearTimeout(timeout);
-        this.timeout = setTimeout(() => applyFilters(), 500);
-    });
-    document.getElementById('categorySelect').addEventListener('change', applyFilters);
-    document.getElementById('sortSelect').addEventListener('change', applyFilters);
-    document.getElementById('resetFilters').addEventListener('click', () => {
-        window.location.href = '/articles';
-    });
+    let searchTimeout, authorTimeout;
+    
+    const searchInput = document.getElementById('searchInput');
+    const authorInput = document.getElementById('authorInput');
+    const categorySelect = document.getElementById('categorySelect');
+    const sortSelect = document.getElementById('sortSelect');
+    const resetBtn = document.getElementById('resetFilters');
+    
+    if (searchInput) {
+        searchInput.addEventListener('input', () => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(applyFilters, 500);
+        });
+    }
+    
+    if (authorInput) {
+        authorInput.addEventListener('input', () => {
+            clearTimeout(authorTimeout);
+            authorTimeout = setTimeout(applyFilters, 500);
+        });
+    }
+    
+    if (categorySelect) categorySelect.addEventListener('change', applyFilters);
+    if (sortSelect) sortSelect.addEventListener('change', applyFilters);
+    if (resetBtn) resetBtn.addEventListener('click', () => { window.location.href = '/articles'; });
 </script>
 
-<h1>📚 Все статьи</h1>
+<style>
+.filters-bar {
+    background: white;
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
 
-{{#if articles.length}}
-    <div class="articles-grid">
-        {{#each articles}}
-            <div class="card">
-                {{#if this.image}}
-                    <img src="{{this.image}}" class="article-image" alt="{{this.title}}">
-                {{/if}}
-                <div class="article-content">
-                    <h3 class="article-title"><a href="/articles/{{this.id}}">{{this.title}}</a></h3>
-                    <div class="article-meta">
-                        <span><i class="fas fa-user"></i> {{this.author.username}}</span>
-                        <span><i class="far fa-calendar-alt"></i> {{formatDate this.createdAt}}</span>
-                        <span><i class="fas fa-eye"></i> {{this.views}}</span>
-                        <span><i class="fas fa-heart"></i> {{this.likesCount}}</span>
-                    </div>
-                    <div class="article-meta">
-                        <span><i class="fas fa-folder"></i> {{this.category}}</span>
-                        {{#if this.tags.length}}
-                            <span><i class="fas fa-tags"></i> {{#each this.tags}}#{{this}} {{/each}}</span>
-                        {{/if}}
-                    </div>
-                    <p class="article-excerpt">{{truncate this.content 120}}</p>
-                    <a href="/articles/{{this.id}}" class="btn btn-outline" style="margin-top: 0.5rem;">Читать →</a>
-                </div>
-            </div>
-        {{/each}}
-    </div>
-{{else}}
-    <div style="text-align: center; padding: 3rem; background: white; border-radius: var(--radius);">
-        <i class="fas fa-newspaper" style="font-size: 3rem; color: var(--gray);"></i>
-        <h2 style="margin: 1rem 0;">Статей не найдено</h2>
-        <p>Попробуйте изменить параметры поиска или <a href="/articles/create">напишите первую статью</a></p>
-    </div>
-{{/if}}
+.filters-row {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    align-items: flex-end;
+}
 
-{{#if user}}
-    <div style="margin-top: 2rem; text-align: center;">
-        <a href="/articles/create" class="btn btn-primary"><i class="fas fa-plus"></i> Написать новую статью</a>
-    </div>
-{{/if}}
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.filter-group label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.filter-input, .filter-select {
+    padding: 0.5rem 0.8rem;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    min-width: 150px;
+    background: white;
+}
+
+.filter-input:focus, .filter-select:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102,126,234,0.1);
+}
+
+.btn-reset {
+    background: none;
+    border: 1px solid #dc3545;
+    color: #dc3545;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 0.85rem;
+    transition: all 0.3s;
+    margin-top: 1.2rem;
+}
+
+.btn-reset:hover {
+    background: #dc3545;
+    color: white;
+}
+
+.active-filters {
+    margin-bottom: 1rem;
+}
+
+.filter-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: #e8f4f8;
+    padding: 0.3rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    color: #333;
+}
+
+.remove-filter {
+    color: #dc3545;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.remove-filter:hover {
+    color: #a71d2a;
+}
+
+.btn-sm {
+    padding: 0.2rem 0.6rem;
+    font-size: 0.7rem;
+}
+
+.favorite-badge {
+    background: #ff6b6b;
+    color: white;
+    padding: 0.2rem 0.5rem;
+    border-radius: 20px;
+    font-size: 0.7rem;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem;
+    background: white;
+    border-radius: 12px;
+}
+
+.empty-state i {
+    font-size: 3rem;
+    color: #ccc;
+    margin-bottom: 1rem;
+}
+
+@media (max-width: 768px) {
+    .filters-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .filter-input, .filter-select {
+        width: 100%;
+    }
+    .btn-reset {
+        margin-top: 0;
+    }
+}
+</style>

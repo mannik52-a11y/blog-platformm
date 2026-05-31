@@ -1,11 +1,29 @@
 <div class="article-page" style="max-width: 900px; margin: 0 auto;">
     <div class="card">
-        {{#if article.image}}
-            <img src="{{article.image}}" alt="{{article.title}}" style="width: 100%; max-height: 400px; object-fit: cover;">
+        {{#if article.video_url}}
+            <div class="video-container">
+                <iframe src="{{article.video_url}}" frameborder="0" allowfullscreen></iframe>
+            </div>
         {{/if}}
+        
+        {{#if article.images.length}}
+            <div class="gallery">
+                <div class="gallery-main">
+                    <img src="{{article.images.[0]}}" alt="{{article.title}}" id="mainImage">
+                </div>
+                <div class="gallery-thumbs">
+                    {{#each article.images}}
+                        <img src="{{this}}" class="thumb" onclick="document.getElementById('mainImage').src=this.src">
+                    {{/each}}
+                </div>
+            </div>
+        {{else if article.image}}
+            <img src="{{article.image}}" class="article-image-full" alt="{{article.title}}">
+        {{/if}}
+        
         <div class="article-content" style="padding: 2rem;">
-            <h1>{{article.title}}</h1>
-            <div class="article-meta" style="margin: 1rem 0;">
+            <h1 class="article-title">{{article.title}}</h1>
+            <div class="article-meta" style="margin: 1rem 0; display: flex; gap: 1rem; flex-wrap: wrap;">
                 <span><i class="fas fa-user"></i> {{article.author.username}}</span>
                 <span><i class="far fa-calendar-alt"></i> {{formatDate article.createdAt}}</span>
                 <span><i class="fas fa-eye"></i> {{article.views}} просмотров</span>
@@ -15,15 +33,15 @@
 
             {{#if article.tags.length}}
                 <div style="margin: 1rem 0;">
-                    <strong><i class="fas fa-tags"></i> Теги:</strong>
+                    <strong style="color: rgba(255,255,255,0.9);"><i class="fas fa-tags"></i> Теги:</strong>
                     {{#each article.tags}}
                         <a href="/articles?tag={{this}}" class="tag">#{{this}}</a>
                     {{/each}}
                 </div>
             {{/if}}
 
-            <div style="line-height: 1.8; font-size: 1.1rem; white-space: pre-wrap;">
-                {{article.content}}
+            <div class="article-body" style="line-height: 1.8; font-size: 1.1rem; white-space: pre-wrap;">
+                {{{article.content}}}
             </div>
 
             <div style="margin: 2rem 0; display: flex; gap: 1rem; flex-wrap: wrap;">
@@ -34,18 +52,22 @@
                             <span class="likes-count">{{article.likesCount}}</span>
                         </button>
                     </form>
-                {{else}}
-                    <button class="like-btn" disabled style="opacity: 0.5; cursor: not-allowed;">
-                        <i class="fas fa-heart"></i>
-                        <span class="likes-count">{{article.likesCount}}</span>
-                    </button>
+                    
+                    <form method="POST" action="/articles/{{article.id}}/favorite">
+                        <button type="submit" class="favorite-btn {{#if article.isFavorite}}favorited{{/if}}">
+                            <i class="fas fa-bookmark"></i>
+                            <span>{{#if article.isFavorite}}В избранном{{else}}В избранное{{/if}}</span>
+                        </button>
+                    </form>
                 {{/if}}
+                
                 {{#if isAuthor}}
                     <a href="/articles/{{article.id}}/edit" class="btn btn-primary"><i class="fas fa-edit"></i> Редактировать</a>
                     <form method="POST" action="/articles/{{article.id}}?_method=DELETE" style="display: inline;">
                         <button type="submit" class="btn btn-danger" onclick="return confirm('Удалить статью?')"><i class="fas fa-trash"></i> Удалить</button>
                     </form>
                 {{/if}}
+                
                 {{#if isAdmin}}
                     <form method="POST" action="/admin/articles/{{article.id}}?_method=DELETE" style="display: inline;">
                         <button type="submit" class="btn btn-danger" onclick="return confirm('Удалить статью как админ?')"><i class="fas fa-trash"></i> Удалить (админ)</button>
@@ -69,19 +91,14 @@
                     <div class="comment">
                         <div class="comment-author">
                             <i class="fas fa-user-circle"></i> <a href="/profile/{{this.author.id}}">{{this.author.username}}</a>
-                            <span style="font-size: 0.8rem; color: var(--gray);"> — {{formatDate this.createdAt}}</span>
-                            {{#if (eq ../user.id this.author.id)}}
-                                <form method="POST" action="/comments/{{this.id}}/delete" style="display: inline; float: right;">
-                                    <button type="submit" class="delete-comment" onclick="return confirm('Удалить комментарий?')"><i class="fas fa-trash-alt"></i></button>
-                                </form>
-                            {{/if}}
-                            {{#if ../isAdmin}}
-                                <form method="POST" action="/admin/comments/{{this.id}}?_method=DELETE" style="display: inline; float: right; margin-right: 0.5rem;">
-                                    <button type="submit" class="delete-comment" onclick="return confirm('Удалить комментарий как админ?')"><i class="fas fa-shield-alt"></i></button>
-                                </form>
-                            {{/if}}
+                            <span style="font-size: 0.8rem; opacity: 0.7;"> — {{formatDate this.createdAt}}</span>
                         </div>
                         <p>{{this.content}}</p>
+                        {{#if (or (eq ../user.id this.author.id) ../isAuthor ../isAdmin)}}
+                            <form method="POST" action="/comments/{{this.id}}/delete" style="margin-top: 0.5rem;">
+                                <button type="submit" class="btn-delete" style="padding: 0.2rem 0.5rem;"><i class="fas fa-trash"></i> Удалить</button>
+                            </form>
+                        {{/if}}
                     </div>
                 {{/each}}
             </div>
@@ -90,57 +107,83 @@
 </div>
 
 <style>
+    .video-container { position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; margin-bottom: 1rem; }
+    .video-container iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 12px; }
+    .gallery { margin-bottom: 1rem; }
+    .gallery-main img { width: 100%; max-height: 400px; object-fit: cover; border-radius: 12px; }
+    .gallery-thumbs { display: flex; gap: 0.5rem; margin-top: 0.5rem; flex-wrap: wrap; }
+    .gallery-thumbs img { width: 80px; height: 80px; object-fit: cover; border-radius: 8px; cursor: pointer; transition: opacity 0.3s; }
+    .gallery-thumbs img:hover { opacity: 0.7; }
+    .article-image-full { width: 100%; max-height: 400px; object-fit: cover; border-radius: 12px; margin-bottom: 1rem; }
+    .btn-delete { background: rgba(0,0,0,0.3); border: none; border-radius: 4px; color: white; cursor: pointer; padding: 0.2rem 0.5rem; }
+    .btn-delete:hover { background: #ef4444; }
+    
+    /* Кнопка лайка */
     .like-btn {
-        background: none;
-        border: 1px solid var(--border);
-        padding: 0.5rem 1rem;
+        background: transparent;
+        border: 1px solid rgba(255,255,255,0.3);
         border-radius: 40px;
+        padding: 0.5rem 1.2rem;
         cursor: pointer;
+        transition: all 0.3s ease;
         display: inline-flex;
         align-items: center;
-        gap: 0.3rem;
-        transition: all 0.3s;
+        gap: 0.5rem;
         font-size: 1rem;
+        color: rgba(255,255,255,0.8);
     }
+    
     .like-btn i {
-        color: var(--gray);
-        font-size: 1rem;
+        font-size: 1.1rem;
+        transition: all 0.3s ease;
     }
-    .like-btn.liked i {
-        color: var(--danger);
-    }
-    .like-btn.liked {
-        border-color: var(--danger);
-        background: rgba(239, 68, 68, 0.1);
-    }
+    
     .like-btn:hover {
         transform: scale(1.05);
+        border-color: #ff6b6b;
     }
-    .like-btn:disabled {
-        transform: none;
+    
+    .like-btn.liked {
+        background: #ff6b6b;
+        border-color: #ff6b6b;
+        color: white;
     }
-    .delete-comment {
-        background: none;
-        border: none;
-        color: var(--gray);
+    
+    .like-btn.liked i {
+        color: white;
+    }
+    
+    /* Кнопка избранного */
+    .favorite-btn {
+        background: transparent;
+        border: 1px solid rgba(255,255,255,0.3);
+        border-radius: 40px;
+        padding: 0.5rem 1.2rem;
         cursor: pointer;
-        font-size: 0.8rem;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 1rem;
+        color: rgba(255,255,255,0.8);
     }
-    .delete-comment:hover { color: var(--danger); }
-    .tag {
-        display: inline-block;
-        background: var(--light);
-        padding: 0.2rem 0.7rem;
-        border-radius: 20px;
-        font-size: 0.8rem;
-        color: var(--primary);
-        text-decoration: none;
-        margin: 0 0.2rem;
+    
+    .favorite-btn i {
+        font-size: 1rem;
     }
-    .comment {
-        background: var(--light);
-        padding: 1rem;
-        border-radius: var(--radius);
-        margin-bottom: 1rem;
+    
+    .favorite-btn:hover {
+        transform: scale(1.05);
+        border-color: #f59e0b;
+    }
+    
+    .favorite-btn.favorited {
+        background: #f59e0b;
+        border-color: #f59e0b;
+        color: white;
+    }
+    
+    .likes-count {
+        font-weight: 500;
     }
 </style>

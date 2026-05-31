@@ -1,73 +1,263 @@
 <div class="profile-container">
-    <div class="card" style="text-align: center; padding: 2rem;">
+    <div class="profile-card">
         <div class="profile-avatar">
-            <img src="{{profileUser.avatar}}" alt="{{profileUser.username}}" class="avatar-large">
+            {{#if profileUser.avatar}}
+                <img src="{{profileUser.avatar}}" alt="{{profileUser.username}}" class="avatar-large">
+            {{else}}
+                <div class="avatar-default">
+                    <i class="fas fa-user-circle"></i>
+                </div>
+            {{/if}}
         </div>
-        <h1>{{profileUser.username}}</h1>
-        <p style="color: var(--gray);">{{profileUser.email}}</p>
-        <p style="color: var(--gray);">На сайте с {{formatDate profileUser.createdAt}}</p>
-
+        <h1 class="profile-name">{{profileUser.username}}</h1>
+        <div class="profile-info">
+            <div class="profile-info-item">
+                <span class="info-label">Email:</span>
+                <span class="info-value">{{profileUser.email}}</span>
+            </div>
+            <div class="profile-info-item">
+                <span class="info-label">На сайте с:</span>
+                <span class="info-value">{{formatDate profileUser.createdAt}}</span>
+            </div>
+        </div>
         {{#if isOwnProfile}}
-            <div style="margin-top: 1rem;">
-                <form method="POST" action="/profile/{{profileUser.id}}/avatar" enctype="multipart/form-data" style="display: inline-block;">
-                    <input type="file" name="avatar" accept="image/*" style="display: none;" id="avatarInput" onchange="this.form.submit()">
-                    <button type="button" class="btn btn-outline" onclick="document.getElementById('avatarInput').click()">
-                        🖼️ Сменить аватар
+            <div class="profile-badge">Это ваш профиль</div>
+            <div class="profile-avatar-upload">
+                <form method="POST" action="/profile/{{profileUser.id}}/avatar" enctype="multipart/form-data">
+                    <input type="file" name="avatar" id="avatarInput" accept="image/*" style="display: none;" onchange="this.form.submit()">
+                    <button type="button" class="btn-upload" onclick="document.getElementById('avatarInput').click()">
+                        <i class="fas fa-camera"></i> Сменить аватар
                     </button>
                 </form>
             </div>
         {{/if}}
     </div>
 
-    <div class="stats-grid">
-        <div class="stat-card"><div class="stat-number">{{stats.articles}}</div><div class="stat-label">Статей</div></div>
-        <div class="stat-card"><div class="stat-number">{{stats.comments}}</div><div class="stat-label">Комментариев</div></div>
-        <div class="stat-card"><div class="stat-number">{{stats.likes}}</div><div class="stat-label">Лайков получил</div></div>
+    <div class="profile-stats">
+        <div class="stat-card">
+            <div class="stat-number">{{stats.articles}}</div>
+            <div class="stat-label">Статей</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{stats.comments}}</div>
+            <div class="stat-label">Комментариев</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{stats.likes}}</div>
+            <div class="stat-label">Лайков получил</div>
+        </div>
     </div>
 
     {{#if articles.length}}
-        <h2>📄 Мои статьи</h2>
-        <div class="articles-grid">
-            {{#each articles}}
-                <div class="card">
-                    {{#if this.image}}
-                        <img src="{{this.image}}" class="article-image" alt="{{this.title}}">
-                    {{/if}}
-                    <div class="article-content">
-                        <h3 class="article-title"><a href="/articles/{{this.id}}">{{this.title}}</a></h3>
-                        <div class="article-meta">
-                            <span>📅 {{formatDate this.createdAt}}</span>
-                            <span>👁️ {{this.views}} просмотров</span>
+        <div class="profile-section">
+            <h2>📄 Статьи</h2>
+            <div class="articles-grid">
+                {{#each articles}}
+                    <div class="article-card">
+                        {{#if this.image}}
+                            <img src="{{this.image}}" class="article-image" alt="{{this.title}}">
+                        {{/if}}
+                        <div class="article-content">
+                            <h3 class="article-title"><a href="/articles/{{this.id}}">{{this.title}}</a></h3>
+                            <div class="article-meta">
+                                <span>{{formatDate this.createdAt}}</span>
+                                <span>{{this.views}} просмотров</span>
+                            </div>
                         </div>
-                        <p class="article-excerpt">{{truncate this.content 100}}</p>
                     </div>
-                </div>
-            {{/each}}
+                {{/each}}
+            </div>
         </div>
     {{/if}}
 
     {{#if comments.length}}
-        <h2>💬 Мои комментарии</h2>
-        <div style="display: flex; flex-direction: column; gap: 1rem;">
-            {{#each comments}}
-                <div class="comment">
-                    <div class="comment-author">
-                        <a href="/articles/{{this.article.id}}">{{this.article.title}}</a>
-                        <span style="font-size: 0.8rem; color: var(--gray);"> — {{formatDate this.createdAt}}</span>
+        <div class="profile-section">
+            <h2>💬 Комментарии</h2>
+            <div class="comments-list">
+                {{#each comments}}
+                    <div class="comment-item">
+                        <div class="comment-header">
+                            <a href="/articles/{{this.article.id}}" class="comment-article-title">{{this.article.title}}</a>
+                            <span class="comment-date">{{formatDate this.createdAt}}</span>
+                        </div>
+                        <p class="comment-text">{{this.content}}</p>
                     </div>
-                    <p>{{this.content}}</p>
-                </div>
-            {{/each}}
+                {{/each}}
+            </div>
         </div>
     {{/if}}
 </div>
 
 <style>
-    .profile-container { max-width: 1000px; margin: 0 auto; }
-    .profile-avatar { margin-bottom: 1rem; }
-    .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin: 2rem 0; }
-    .stat-card { background: white; padding: 1rem; border-radius: var(--radius); text-align: center; box-shadow: var(--shadow); }
-    .stat-number { font-size: 2rem; font-weight: 700; color: var(--primary); }
-    .stat-label { color: var(--gray); }
-    h2 { margin: 1.5rem 0 1rem; font-size: 1.3rem; }
+.profile-container {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.profile-card {
+    background: white;
+    border-radius: 16px;
+    padding: 2rem;
+    text-align: center;
+    margin-bottom: 2rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    border: 1px solid #e5e7eb;
+}
+
+.profile-avatar {
+    margin-bottom: 1rem;
+}
+
+.avatar-large {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid #667eea;
+}
+
+.avatar-default {
+    font-size: 120px;
+    color: #cbd5e1;
+}
+
+.profile-name {
+    font-size: 1.8rem;
+    color: #1f2937;
+    margin-bottom: 1rem;
+}
+
+.profile-info {
+    max-width: 300px;
+    margin: 0 auto;
+    text-align: left;
+}
+
+.profile-info-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.info-label {
+    font-weight: 500;
+    color: #6b7280;
+}
+
+.info-value {
+    color: #1f2937;
+}
+
+.profile-badge {
+    display: inline-block;
+    margin-top: 1rem;
+    padding: 0.3rem 1rem;
+    background: #e0e7ff;
+    color: #4338ca;
+    border-radius: 20px;
+    font-size: 0.8rem;
+}
+
+.profile-avatar-upload {
+    margin-top: 1rem;
+}
+
+.btn-upload {
+    background: #f3f4f6;
+    border: 1px solid #d1d5db;
+    padding: 0.4rem 1rem;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: all 0.3s;
+}
+
+.btn-upload:hover {
+    background: #e5e7eb;
+}
+
+.profile-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1rem;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    border: 1px solid #e5e7eb;
+}
+
+.stat-number {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #667eea;
+}
+
+.stat-label {
+    font-size: 0.7rem;
+    color: #6b7280;
+    text-transform: uppercase;
+}
+
+.profile-section {
+    margin-bottom: 2rem;
+}
+
+.profile-section h2 {
+    font-size: 1.3rem;
+    color: #1f2937;
+    margin-bottom: 1rem;
+}
+
+.comments-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.comment-item {
+    background: white;
+    border-radius: 12px;
+    padding: 1rem;
+    border: 1px solid #e5e7eb;
+    transition: all 0.3s;
+}
+
+.comment-item:hover {
+    border-color: #667eea;
+}
+
+.comment-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.comment-article-title {
+    font-weight: 500;
+    color: #667eea;
+    text-decoration: none;
+}
+
+.comment-article-title:hover {
+    text-decoration: underline;
+}
+
+.comment-date {
+    font-size: 0.7rem;
+    color: #9ca3af;
+}
+
+.comment-text {
+    color: #4b5563;
+    line-height: 1.4;
+}
 </style>

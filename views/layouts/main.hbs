@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{title}} | БлогПлатформа</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/css/style.css">
 </head>
@@ -12,60 +12,44 @@
     <header class="header">
         <div class="nav-container">
             <a href="/" class="logo">
-                <i class="fas fa-blog"></i>
-                <span>Блог<span class="logo-highlight">Платформа</span></span>
+                <i class="fas fa-blog"></i> блог·платформа
             </a>
             <div class="nav-links">
-                <a href="/"><i class="fas fa-home"></i> Главная</a>
-                <a href="/articles"><i class="fas fa-newspaper"></i> Статьи</a>
+                <a href="/">Главная</a>
+                <a href="/articles">Статьи</a>
                 {{#if user}}
-                    <a href="/articles/create" class="nav-btn"><i class="fas fa-pen-fancy"></i> Написать</a>
-                    <div class="nav-user">
+                    <a href="/articles/create" class="btn-write">Написать</a>
+                    <div class="user-menu">
                         {{#if user.avatar}}
                             <img src="{{user.avatar}}" class="avatar" alt="{{user.username}}">
                         {{else}}
-                            <i class="fas fa-user-circle"></i>
+                            <div class="avatar-placeholder">
+                                <i class="fas fa-user-circle"></i>
+                            </div>
                         {{/if}}
-                        <span class="user-name">{{user.username}}</span>
                         <div class="user-dropdown">
                             <a href="/profile/{{user.id}}"><i class="fas fa-user"></i> Профиль</a>
-                            <a href="/articles?author={{user.username}}"><i class="fas fa-book"></i> Мои статьи</a>
+                            <a href="/articles?author={{user.username}}"><i class="fas fa-newspaper"></i> Мои статьи</a>
+                            <a href="/favorites"><i class="fas fa-heart"></i> Избранное</a>
                             <a href="/logout"><i class="fas fa-sign-out-alt"></i> Выйти</a>
                         </div>
                     </div>
                 {{else}}
-                    <a href="/login" class="nav-btn-outline"><i class="fas fa-sign-in-alt"></i> Вход</a>
-                    <a href="/register" class="nav-btn"><i class="fas fa-user-plus"></i> Регистрация</a>
+                    <a href="/login" class="btn-auth">Вход</a>
+                    <a href="/register" class="btn-auth">Регистрация</a>
                 {{/if}}
             </div>
         </div>
     </header>
 
     <main class="container">
-        {{#if success}}
-            <div class="alert alert-success">
-                <i class="fas fa-check-circle"></i> {{success}}
-            </div>
-        {{/if}}
-        {{#if error}}
-            <div class="alert alert-error">
-                <i class="fas fa-exclamation-circle"></i> {{error}}
-            </div>
-        {{/if}}
+        {{#if success}}<div class="alert alert-success">{{success}}</div>{{/if}}
+        {{#if error}}<div class="alert alert-error">{{error}}</div>{{/if}}
         {{{body}}}
     </main>
 
     <footer class="footer">
-        <div class="footer-content">
-            <p><i class="far fa-copyright"></i> 2026 БлогПлатформа — место для ваших мыслей</p>
-            <div class="footer-links">
-                <a href="/"><i class="fas fa-home"></i></a>
-                <a href="/articles"><i class="fas fa-newspaper"></i></a>
-                {{#if user}}
-                    <a href="/articles/create"><i class="fas fa-pen-fancy"></i></a>
-                {{/if}}
-            </div>
-        </div>
+        <p>© 2026 блог·платформа — место для ваших мыслей</p>
     </footer>
 
     <script src="/js/main.js"></script>
