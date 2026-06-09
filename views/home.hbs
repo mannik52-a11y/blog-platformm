@@ -4,28 +4,21 @@
     </div>
     <h1>Делитесь мыслями,<br>находите единомышленников</h1>
     <div class="hero-buttons">
-        <a href="/register" class="btn btn-primary">Начать</a>
-        <a href="/login" class="btn btn-outline">Войти</a>
+        {{#if user}}
+            <a href="/articles/create" class="btn btn-primary">Написать статью</a>
+            <a href="/articles" class="btn btn-outline">Читать статьи</a>
+        {{else}}
+            <a href="/register" class="btn btn-primary">Начать</a>
+            <a href="/login" class="btn btn-outline">Войти</a>
+        {{/if}}
     </div>
 </div>
 
 <div class="stats-grid">
-    <div class="stat-card">
-        <div class="stat-number">{{stats.articles}}</div>
-        <div class="stat-label">статей</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-number">{{stats.users}}</div>
-        <div class="stat-label">авторов</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-number">{{stats.comments}}</div>
-        <div class="stat-label">комментариев</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-number">{{stats.likes}}</div>
-        <div class="stat-label">лайков</div>
-    </div>
+    <div class="stat-card"><div class="stat-number">{{stats.articles}}</div><div class="stat-label">статей</div></div>
+    <div class="stat-card"><div class="stat-number">{{stats.users}}</div><div class="stat-label">авторов</div></div>
+    <div class="stat-card"><div class="stat-number">{{stats.comments}}</div><div class="stat-label">комментариев</div></div>
+    <div class="stat-card"><div class="stat-number">{{stats.likes}}</div><div class="stat-label">лайков</div></div>
 </div>
 
 <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem;">

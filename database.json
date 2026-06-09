@@ -10,9 +10,41 @@
       "avatar": "/uploads/default-avatar.png",
       "createdAt": "2026-06-09T19:22:18.036Z",
       "privacyAccepted": "2026-06-09T19:22:18.036Z"
+    },
+    {
+      "id": 2,
+      "username": "123",
+      "email": "123@list.ru",
+      "password": "$2a$10$mX3fwYeFqT8S4MnaDsnPC.cAGXzzm4EZs8ObzmmTvAY9..feYySQi",
+      "role": "user",
+      "status": "active",
+      "avatar": "/uploads/default-avatar.png",
+      "createdAt": "2026-06-09T19:24:06.182Z",
+      "privacyAccepted": "2026-06-09T19:24:06.182Z"
     }
   ],
-  "articles": [],
+  "articles": [
+    {
+      "id": 1,
+      "title": "32131",
+      "content": "31231",
+      "category": "Кулинария",
+      "tags": [
+        "312"
+      ],
+      "images": "[\"/uploads/1781033065242-35743f7c1f704ee330309f6eae63257b.jpg\",\"/uploads/1781033065243-Ð¡Ð½Ð¸Ð¼Ð¾3333Ðº.PNG\",\"/uploads/1781033065245-Ð¡Ð½Ð¸Ð¼Ð¾Ðº.PNG\",\"/uploads/1781033065245-header â ÐºÐ¾Ð¿Ð¸Ñ.PNG\",\"/uploads/1781033065246-photo_2025-08-27_19-05-43 â ÐºÐ¾Ð¿Ð¸Ñ.jpg\"]",
+      "video_url": null,
+      "video_original_url": "https://rutube.sport/video/barselona-real-obzor-matcha-chempionata-ispanii-10052026/",
+      "image": "/uploads/1781033065242-35743f7c1f704ee330309f6eae63257b.jpg",
+      "author": {
+        "id": 2,
+        "username": "123"
+      },
+      "createdAt": "2026-06-09T19:24:25.252Z",
+      "views": 0,
+      "status": "published"
+    }
+  ],
   "comments": [],
   "likes": [],
   "favorites": [],
