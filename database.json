@@ -1,0 +1,20 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "username": "admin",
+      "email": "admin@blog.com",
+      "password": "$2a$10$4GfpMTRgtP4HlyhdFo1rJeCZj.udWyTbuS9tRcAqS3G5ZRs3N41JS",
+      "role": "admin",
+      "status": "active",
+      "avatar": "/uploads/default-avatar.png",
+      "createdAt": "2026-06-09T19:22:18.036Z",
+      "privacyAccepted": "2026-06-09T19:22:18.036Z"
+    }
+  ],
+  "articles": [],
+  "comments": [],
+  "likes": [],
+  "favorites": [],
+  "resetTokens": []
+}

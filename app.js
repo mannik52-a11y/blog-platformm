@@ -8,8 +8,8 @@ const { engine } = require('express-handlebars');
 const bcrypt = require('bcryptjs');
 const multer = require('multer');
 const fs = require('fs');
-const nodemailer = require('nodemailer');
 const crypto = require('crypto');
+const nodemailer = require('nodemailer');
 
 const app = express();
 
@@ -24,22 +24,70 @@ if (!fs.existsSync('public/uploads')) {
     fs.mkdirSync('public/uploads', { recursive: true });
 }
 
-// Настройка почты
-const transporter = nodemailer.createTransport({
-    host: process.env.EMAIL_HOST || 'smtp.mail.ru',
-    port: parseInt(process.env.EMAIL_PORT) || 465,
-    secure: true,
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-    }
-});
+// ============= ФАЙЛОВОЕ ХРАНИЛИЩЕ =============
+const DATA_FILE = path.join(__dirname, 'database.json');
 
-// Хранилище для кодов восстановления
+// Структуры данных
+let users = [];
+let articles = [];
+let comments = [];
+let likes = [];
+let favorites = [];
 let resetTokens = [];
+
+// Загрузка данных из файла
+function loadData() {
+    try {
+        if (fs.existsSync(DATA_FILE)) {
+            const data = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
+            users = data.users || [];
+            articles = data.articles || [];
+            comments = data.comments || [];
+            likes = data.likes || [];
+            favorites = data.favorites || [];
+            resetTokens = data.resetTokens || [];
+            console.log(`✅ Загружено: ${users.length} пользователей, ${articles.length} статей, ${comments.length} комментариев`);
+        } else {
+            console.log('⚠️ Файл database.json не найден, создаётся новый');
+            saveData();
+        }
+    } catch (err) {
+        console.error('❌ Ошибка загрузки данных:', err.message);
+    }
+}
+
+// Сохранение данных в файл
+function saveData() {
+    const data = { users, articles, comments, likes, favorites, resetTokens };
+    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+    console.log('💾 Данные сохранены в database.json');
+}
+
+// ============= НАСТРОЙКА ПОЧТЫ =============
+let transporter = null;
+try {
+    if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+        transporter = nodemailer.createTransport({
+            host: process.env.EMAIL_HOST || 'smtp.mail.ru',
+            port: parseInt(process.env.EMAIL_PORT) || 465,
+            secure: true,
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS
+            }
+        });
+        console.log('✅ Почта настроена');
+    } else {
+        console.log('⚠️ Почта не настроена (пропущено)');
+    }
+} catch (err) {
+    console.log('⚠️ Ошибка настройки почты:', err.message);
+}
 
 // Функция отправки email
 async function sendResetEmail(email, code, username) {
+    if (!transporter) return false;
+    
     const html = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f5f0eb; border-radius: 12px;">
             <h1 style="color: #2c2825;">Восстановление пароля</h1>
@@ -51,9 +99,8 @@ async function sendResetEmail(email, code, username) {
             </div>
             <p>Введите этот код на странице восстановления пароля.</p>
             <p>Код действителен в течение 15 минут.</p>
-            <p>Если вы не запрашивали восстановление пароля, просто проигнорируйте это письмо.</p>
             <hr style="border: none; border-top: 1px solid #e8e0d8; margin: 20px 0;">
-            <p style="color: #6b635c; font-size: 12px;">© 2026 БлогПлатформа — место для ваших мыслей</p>
+            <p style="color: #6b635c; font-size: 12px;">© 2026 БлогПлатформа</p>
         </div>
     `;
     
@@ -63,48 +110,14 @@ async function sendResetEmail(email, code, username) {
         subject: 'Восстановление пароля',
         html: html
     });
+    return true;
 }
 
-// Функция для генерации 6-значного кода
 function generateResetCode() {
     return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-// JSON хранилище
-const DATA_FILE = path.join(__dirname, 'data.json');
-
-let users = [];
-let articles = [];
-let comments = [];
-let likes = [];
-let favorites = [];
-
-function loadData() {
-    try {
-        if (fs.existsSync(DATA_FILE)) {
-            const data = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
-            users = data.users || [];
-            articles = data.articles || [];
-            comments = data.comments || [];
-            likes = data.likes || [];
-            favorites = data.favorites || [];
-            resetTokens = data.resetTokens || [];
-            console.log(`✅ Загружено: ${users.length} пользователей, ${articles.length} статей`);
-        } else {
-            saveData();
-        }
-    } catch (err) {
-        console.error('Ошибка загрузки:', err.message);
-    }
-}
-
-function saveData() {
-    const data = { users, articles, comments, likes, favorites, resetTokens };
-    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
-    console.log('💾 Данные сохранены');
-}
-
-// Handlebars с helpers
+// ============= НАСТРОЙКА HANDLEBARS =============
 app.engine('hbs', engine({
     extname: '.hbs',
     defaultLayout: 'main',
@@ -114,7 +127,8 @@ app.engine('hbs', engine({
         or: (a, b) => a || b,
         formatDate: (date) => {
             if (!date) return '';
-            return new Date(date).toLocaleDateString('ru-RU');
+            const d = new Date(date);
+            return d.toLocaleDateString('ru-RU');
         },
         truncate: (str, len) => str?.length > len ? str.substring(0, len) + '...' : str,
         getVideoEmbedUrl: (url) => {
@@ -131,6 +145,7 @@ app.engine('hbs', engine({
 app.set('view engine', 'hbs');
 app.set('views', path.join(__dirname, 'views'));
 
+// ============= MIDDLEWARE =============
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
@@ -156,6 +171,7 @@ app.use((req, res, next) => {
 const categories = ['Технологии', 'Путешествия', 'Кулинария', 'Спорт', 'Музыка',
     'Кино', 'Книги', 'Искусство', 'Наука', 'Образование'];
 
+// ============= MIDDLEWARE ПРОВЕРКИ =============
 const isAuthenticated = (req, res, next) => {
     if (req.session.user) return next();
     req.flash('error', 'Войдите в систему');
@@ -172,7 +188,7 @@ const isNotBanned = (req, res, next) => {
     const user = users.find(u => u.id === req.session.user?.id);
     if (user && user.status === 'banned') {
         req.session.destroy();
-        req.flash('error', 'Аккаунт заблокирован');
+        req.flash('error', 'Ваш аккаунт заблокирован');
         return res.redirect('/login');
     }
     next();
@@ -201,7 +217,7 @@ const initAdmin = async () => {
             privacyAccepted: new Date()
         });
         saveData();
-        console.log('✅ Админ: admin / 123');
+        console.log('✅ Админ создан: admin / 123');
     }
 };
 
@@ -274,34 +290,22 @@ app.post('/login', async (req, res) => {
 app.get('/logout', (req, res) => { req.session.destroy(); res.redirect('/'); });
 
 // ============= ВОССТАНОВЛЕНИЕ ПАРОЛЯ =============
-
-// Страница запроса восстановления
 app.get('/forgot-password', (req, res) => {
     res.render('forgot-password', { title: 'Восстановление пароля' });
 });
 
-// Отправка кода на почту
 app.post('/forgot-password', async (req, res) => {
     const { email } = req.body;
-    
     const user = users.find(u => u.email === email);
     if (!user) {
         req.flash('error', 'Пользователь с таким email не найден');
         return res.redirect('/forgot-password');
     }
     
-    // Удаляем старые токены для этого пользователя
     resetTokens = resetTokens.filter(t => t.email !== email);
-    
     const code = generateResetCode();
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 минут
-    
-    resetTokens.push({
-        email,
-        code,
-        expiresAt,
-        createdAt: new Date()
-    });
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+    resetTokens.push({ email, code, expiresAt, createdAt: new Date() });
     saveData();
     
     try {
@@ -310,44 +314,37 @@ app.post('/forgot-password', async (req, res) => {
         res.redirect('/reset-password');
     } catch (error) {
         console.error('Ошибка отправки email:', error);
-        req.flash('error', 'Ошибка при отправке письма. Попробуйте позже.');
+        req.flash('error', 'Ошибка при отправке письма');
         res.redirect('/forgot-password');
     }
 });
 
-// Страница ввода кода и нового пароля
 app.get('/reset-password', (req, res) => {
     res.render('reset-password', { title: 'Сброс пароля' });
 });
 
-// Проверка кода и смена пароля
 app.post('/reset-password', async (req, res) => {
     const { email, code, password, confirm_password } = req.body;
-    
     if (!email || !code || !password) {
         req.flash('error', 'Заполните все поля');
         return res.redirect('/reset-password');
     }
-    
     if (password !== confirm_password) {
         req.flash('error', 'Пароли не совпадают');
         return res.redirect('/reset-password');
     }
-    
     if (password.length < 3) {
         req.flash('error', 'Пароль должен быть не менее 3 символов');
         return res.redirect('/reset-password');
     }
     
     const token = resetTokens.find(t => t.email === email && t.code === code);
-    
     if (!token) {
         req.flash('error', 'Неверный код восстановления');
         return res.redirect('/reset-password');
     }
-    
     if (new Date() > new Date(token.expiresAt)) {
-        req.flash('error', 'Код восстановления истёк. Запросите новый.');
+        req.flash('error', 'Код истёк. Запросите новый.');
         resetTokens = resetTokens.filter(t => t.email !== email);
         saveData();
         return res.redirect('/forgot-password');
@@ -359,14 +356,11 @@ app.post('/reset-password', async (req, res) => {
         return res.redirect('/forgot-password');
     }
     
-    const hashedPassword = await bcrypt.hash(password, 10);
-    user.password = hashedPassword;
-    
-    // Удаляем использованный токен
+    user.password = await bcrypt.hash(password, 10);
     resetTokens = resetTokens.filter(t => t.email !== email);
     saveData();
     
-    req.flash('success', 'Пароль успешно изменён! Теперь вы можете войти.');
+    req.flash('success', 'Пароль успешно изменён!');
     res.redirect('/login');
 });
 
@@ -726,8 +720,13 @@ app.post('/profile/:id/avatar', isAuthenticated, upload.single('avatar'), (req, 
     res.redirect(`/profile/${req.params.id}`);
 });
 
+// ============= ЗАПУСК =============
 const PORT = process.env.PORT || 3000;
+
 loadData();
 initAdmin().then(() => {
-    app.listen(PORT, () => console.log(`✅ Сервер: http://localhost:${PORT}`));
+    app.listen(PORT, () => {
+        console.log(`✅ Сервер: http://localhost:${PORT}`);
+        console.log(`📁 Данные хранятся в файле: ${DATA_FILE}`);
+    });
 });
